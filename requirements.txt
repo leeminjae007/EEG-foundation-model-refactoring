@@ -1,0 +1,14 @@
+# Python 3.8.16; versions recorded by the completed GR9-1 run.
+torch==2.0.1
+numpy==1.24.4
+scipy==1.10.1
+mne==1.6.1
+lmdb==1.4.1
+PyYAML==6.0.3
+scikit-learn==1.2.2
+h5py==3.8.0
+pandas==1.5.3
+tqdm==4.69.0
+pytest==8.3.5
+openpyxl==3.1.5
+natsort==8.4.0

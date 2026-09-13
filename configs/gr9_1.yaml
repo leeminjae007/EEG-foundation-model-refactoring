@@ -1,0 +1,103 @@
+patch_encoder:
+  patch_samples: 200
+  embed_dim: 200
+  time_conv_channels:
+  - 64
+  - 128
+  - 200
+  time_kernel_sizes:
+  - 15
+  - 7
+  - 3
+  time_strides:
+  - 5
+  - 3
+  - 2
+  time_group_norm_groups: 8
+  time_feature_dim: 100
+  frequency_bins: 101
+  frequency_hidden_dim: 100
+  frequency_feature_dim: 100
+  dropout: 0.1
+encoder:
+  embed_dim: 200
+  spatial_heads: 4
+  temporal_heads: 4
+  mlp_ratio: 4.0
+  dropout: 0.1
+  attention_dropout: 0.1
+  norm_epsilon: 1.0e-05
+position:
+  encoder_spatial_dim: 100
+  encoder_temporal_dim: 100
+  decoder_spatial_dim: 50
+  decoder_temporal_dim: 50
+  temporal_max_period: 10000.0
+  rms_epsilon: 1.0e-06
+masking:
+  context_scale:
+  - 0.85
+  - 1.0
+  target_scale:
+  - 0.15
+  - 0.15
+  target_aspect_ratio:
+  - 0.75
+  - 1.5
+  num_target_blocks: 4
+  min_context_tokens: 10
+mae:
+  decoder_dim: 100
+  decoder_depth: 4
+  decoder_heads: 4
+  decoder_mlp_ratio: 4.0
+  decoder_dropout: 0.1
+  attention_dropout: 0.1
+  norm_epsilon: 1.0e-05
+  smooth_l1_beta: 0.1
+optimization:
+  epochs: 40
+  batch_size_per_gpu: 128
+  gradient_accumulation_steps: 1
+  base_learning_rate: 0.0005
+  min_learning_rate: 1.0e-05
+  weight_decay: 0.05
+  adam_betas:
+  - 0.9
+  - 0.999
+  adam_epsilon: 1.0e-08
+  gradient_clip_norm: 1.0
+seed: 42
+data:
+  channel_names:
+  - FP1
+  - FP2
+  - F3
+  - F4
+  - C3
+  - C4
+  - P3
+  - P4
+  - O1
+  - O2
+  - F7
+  - F8
+  - T3
+  - T4
+  - T5
+  - T6
+  - FZ
+  - CZ
+  - PZ
+  value_scale: 100.0
+  num_workers: 8
+  pin_memory: true
+  sample_rate: 200
+  dataset_dir: /gpfs/data/oermannlab/users/ml10266/Data/eeg_foundation_downstream/tuh_eeg
+  num_patches: 30
+runtime:
+  output: outputs/pretrain
+  log_every_steps: 20
+  save_every_epochs: 10
+  keep_last_checkpoints: 3
+  deterministic: false

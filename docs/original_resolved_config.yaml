@@ -1,0 +1,203 @@
+experiment:
+  trial_name: gr9_1_equal_shpe_gelu_rmsnorm_d200_e40_20260910
+  parent_trial: gr3_2_smooth_l1_ijepa_multiblock_dual3_shlinear_d200_rmsnorm_e40_20260904
+  change_from_previous: 'PE-only: encoder/decoder equal-width SHPE-temporal concat,
+    then GELU and RMSNorm before additive token injection'
+  seed: 42
+data:
+  root: /gpfs/data/oermannlab/users/ml10266/Data/eeg_foundation_downstream
+  dataset: tueg
+  processed_path: tuh_eeg
+  file_format: lmdb_pickle
+  sample_rate: 200
+  segment_seconds: 30
+  patch_seconds: 1
+  channel_names:
+  - FP1
+  - FP2
+  - F3
+  - F4
+  - C3
+  - C4
+  - P3
+  - P4
+  - O1
+  - O2
+  - F7
+  - F8
+  - T3
+  - T4
+  - T5
+  - T6
+  - FZ
+  - CZ
+  - PZ
+  value_scale: 100.0
+  num_workers: 8
+  pin_memory: true
+patch_encoder:
+  patch_samples: 200
+  embed_dim: 200
+  time_conv_channels:
+  - 64
+  - 128
+  - 200
+  time_kernel_sizes:
+  - 15
+  - 7
+  - 3
+  time_strides:
+  - 5
+  - 3
+  - 2
+  time_group_norm_groups: 8
+  time_feature_dim: 100
+  frequency_bins: 101
+  frequency_hidden_dim: 100
+  frequency_feature_dim: 100
+  fusion: concat
+  dropout: 0.1
+latent_tokenizer:
+  mode: none
+encoder:
+  architecture: s2t_t2s
+  embed_dim: 200
+  depth: 12
+  spatial_heads: 4
+  temporal_heads: 4
+  mlp_ratio: 4.0
+  dropout: 0.1
+  attention_dropout: 0.1
+  drop_path_rate: 0.0
+  norm_epsilon: 1.0e-05
+  norm_type: rms_norm
+  activation: gelu
+  weight_initialization: kaiming_normal_fan_out_relu
+  fusion: gated_sum
+  fusion_schedule: stagewise
+  hierarchical_summary: false
+position:
+  spatial: spherical_harmonic_factorized
+  spatial_pe_type: spherical_harmonic
+  spherical_harmonic_max_degree: 4
+  spherical_harmonic_orders: all
+  spatial_projection: learnable_linear
+  fusion: concat
+  encoder_spatial_dim: 100
+  encoder_temporal_dim: 100
+  decoder_spatial_dim: 50
+  decoder_temporal_dim: 50
+  fixed_projection_seed: 42
+  spatial_coordinate_scale: 6.283185307179586
+  temporal: sinusoidal
+  temporal_max_period: 10000.0
+  component_normalization: none
+  component_scaling: none
+  rms_epsilon: 1.0e-06
+  post_fusion_activation: gelu
+  post_fusion_normalization: rms_norm
+masking:
+  policy: ijepa_multiblock
+  context_scale:
+  - 0.85
+  - 1.0
+  target_scale:
+  - 0.15
+  - 0.15
+  target_aspect_ratio:
+  - 0.75
+  - 1.5
+  num_context_blocks: 1
+  num_target_blocks: 4
+  min_context_tokens: 10
+  allow_overlap: false
+mae:
+  objective: raw_patch_mae
+  decoder_dim: 100
+  decoder_depth: 4
+  decoder_heads: 4
+  decoder_mlp_ratio: 4.0
+  decoder_dropout: 0.1
+  qkv_bias: true
+  attention_dropout: 0.1
+  norm_epsilon: 1.0e-05
+  normalize_targets: false
+  raw_patch_normalize: false
+  loss: smooth_l1
+  smooth_l1_beta: 0.1
+  frequency_loss_weight: 0.0
+  phase_loss_weight: 0.0
+  spectral_epsilon: 1.0e-08
+optimization:
+  optimizer: adamw
+  epochs: 40
+  batch_size_per_gpu: 128
+  gradient_accumulation_steps: 1
+  base_learning_rate: 0.0005
+  min_learning_rate: 1.0e-05
+  weight_decay: 0.05
+  adam_betas:
+  - 0.9
+  - 0.999
+  adam_epsilon: 1.0e-08
+  scheduler: cosine
+  gradient_clip_norm: 1.0
+  mixed_precision: bf16
+runtime:
+  num_gpus: 4
+  num_nodes: 4
+  gpus_per_node: 1
+  distributed: true
+  compile: false
+  deterministic: false
+  log_every_steps: 20
+  save_every_epochs: 10
+  keep_last_checkpoints: 3
+  output_dir: /gpfs/data/oermannlab/users/ml10266/workspace/eeg-foundation-model/outputs
+  slurm_account: system
+  slurm_partition: a100_short,a100_long
+  slurm_exclude_nodes:
+  - a100-4004
+  - a100-4007
+  - a100-4011
+  - a100-4012
+  - a100-4021
+  - a100-4023
+  - a100-4028
+  - a100-4032
+  - a100-4033
+  - a100-4037
+  - a100-4042
+  - a100-4044
+  - a100-4045
+  slurm_cpus_per_task: 8
+  slurm_memory: 32G
+  slurm_time: 1-00:00:00
+  slurm_nice: 0
+  slurm_exclusive: false
+tracking:
+  enabled: true
+  mode: online
+  project: eeg_mae_pretraining
+  entity: null
+  group: gr9_1_equal_shpe_gelu_rmsnorm_d200_e40_20260910
+  job_type: gr9-1_pretrain
+  tags:
+  - gr9
+  - gr9-1
+  - smooth_l1
+  - ijepa_multiblock
+  - pe_only
+  - equal_concat
+  - post_fusion_gelu
+  - post_fusion_rmsnorm
+  - d200
+  - e40
+  resume: false
+  run_id: null
+  resume_checkpoint: null
+resolved:
+  dataset_dir: /gpfs/data/oermannlab/users/ml10266/Data/eeg_foundation_downstream/tuh_eeg
+  segment_samples: 6000
+  num_patches: 30
+  effective_global_batch_size: 512

@@ -1,0 +1,31 @@
+seed: 1234
+data:
+  dataset: chb
+  dataset_dir: /gpfs/data/oermannlab/users/ml10266/Data/eeg_foundation_downstream/chb-mit/processed_seg
+  num_workers: 8
+model:
+  checkpoint: outputs/gr9_1_epoch40.pth
+  head_dropout: 0.1
+  head_hidden_tokens: null
+optimization:
+  epochs: 20
+  batch_size_per_gpu: 64
+  gradient_accumulation_steps: 1
+  tokenizer_learning_rate: 0.0001
+  encoder_learning_rate: 0.0001
+  head_learning_rate: 0.0001
+  min_learning_rate: 1.0e-06
+  weight_decay: 0.01
+  adam_betas:
+  - 0.9
+  - 0.999
+  adam_epsilon: 1.0e-08
+  label_smoothing: 0.0
+  gradient_clip_norm: 1.0
+  warmup_epochs: 5
+  class_counts:
+  - 285070
+  - 1894
+runtime:
+  output: outputs/finetune/gr9-1_warmup5_chb_seed1234
+  log_every_steps: 100

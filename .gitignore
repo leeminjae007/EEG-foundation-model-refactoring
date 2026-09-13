@@ -1,0 +1,32 @@
+# Python caches and local environments
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/
+
+# Training data, caches, outputs, and logs
+cache/
+data/
+processed/
+outputs/
+logs/
+tmp/
+wandb/
+*.log
+
+# Model and generated binary artifacts
+*.pth
+*.pt
+*.ckpt
+*.onnx
+*.npz
+*.npy
+*.pkl
+*.pickle
+*.lmdb
+
+# Editor and OS metadata
+.DS_Store
+.idea/
+.vscode/
