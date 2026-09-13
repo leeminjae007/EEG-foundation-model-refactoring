@@ -26,6 +26,12 @@ wandb/
 *.pickle
 *.lmdb
 
+# Local experiment and audit artifacts
+configs/finetune_regularization/
+docs/*.json
+docs/reve_radius_reference/
+tests/reference_before/
+
 # Editor and OS metadata
 .DS_Store
 .idea/
