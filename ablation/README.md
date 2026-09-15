@@ -149,14 +149,33 @@ bash ablation/scripts/pretrain_sweep.sh pe      4 /실제/TUEG_LMDB 42
 # 두 그룹 모두: 첫 인자를 all로 지정
 ```
 
-Slurm을 사용한다면 제공한 템플릿으로 arm마다 제출할 수 있다. partition/account는 서버 규칙에 맞춰 `sbatch` 옵션에 추가한다. 템플릿은 4 GPU, 32 CPU, 128 GB, 48시간 예시다.
+Slurm에서는 다음 명령으로 제출한다. `a100_short,a100_long` 중 가능한 파티션에서 **총 A100 4개**를 1~4개 노드에 배정받는다. `1노드×4GPU`, `2노드×2GPU`, `4노드×1GPU`, `2+1+1` 배치 모두 같은 world size 4 / global batch 512로 실행한다. GPU마다 CPU 8개와 RAM 32 GB, 제한 시간 24시간을 요청한다. 실제 시작 시각은 클러스터 자원과 계정/QOS 제한에 따라 정해진다.
 
 ```bash
-mkdir -p logs/ablation
-sbatch ablation/scripts/pretrain.slurm encoder_labram 42
-sbatch ablation/scripts/pretrain.slurm pe_acpe 42
+git pull --ff-only origin main
+source scripts/activate.sh
+python -m pip install -r ablation/requirements.txt
+
+# 인코더 5개를 각각 별도 job으로 제출
+bash ablation/scripts/run_pretrain.sh encoder
+# REVE PE만 제출
+bash ablation/scripts/run_reve.sh
+# 개별 arm / seed / 학습 추가 인자
+bash ablation/scripts/run_pretrain.sh encoder_labram 42
+bash ablation/scripts/run_pretrain.sh encoder_labram 42 \
+  --resume outputs/ablation/encoder_labram/seed42/last.pth
+
+# 예전 1노드 고정 요청으로 대기 중이라면, 해당 그룹의 PENDING job만 교체
+bash ablation/scripts/run_pretrain.sh --replace-pending encoder
+bash ablation/scripts/run_reve.sh --replace-pending
 squeue -u "$USER"
 ```
+
+제출기는 같은 사용자·job 이름이 이미 대기/실행 중이면 건너뛴다. `--replace-pending`은 선택한 arm과 seed의 대기 job만 취소하고 새 설정으로 제출하며, 실행 중인 job은 유지한다. 새 스크립트를 pull해도 기존 job의 자원 요청은 바뀌지 않는다. 완료한 run의 checkpoint가 있으면 `--resume` 또는 별도 `--output`을 지정한다.
+
+[`scripts/pretrain_flexible.slurm`](scripts/pretrain_flexible.slurm)은 `--nodes=1-4 --ntasks=4 --gpus-per-task=a100:1`과 `srun`을 사용한다. 각 프로세스는 Slurm이 지정한 GPU 하나만 보고, [`scripts/slurm_worker.sh`](scripts/slurm_worker.sh)가 기존 엔진에 `RANK`, `WORLD_SIZE`, `LOCAL_RANK=0`을 연결한다. 노드 로컬 task 번호를 CUDA 번호로 쓰지 않는다. 첫 노드의 주소와 공통 포트에서 분산 학습을 초기화한다. 포트 충돌 시 `ABLATION_MASTER_PORT`를 지정할 수 있다. [Slurm 자원 요청 문서](https://slurm.schedmd.com/sbatch.html), [GPU 바인딩 문서](https://slurm.schedmd.com/srun.html).
+
+이전 [`scripts/pretrain.slurm`](scripts/pretrain.slurm)은 기존 명령의 호환성을 위해 1노드 전용으로 유지한다. 여러 노드 실행에는 위의 새 제출기를 사용한다.
 
 제출은 이 구현 작업에서 실행하지 않았다. Slurm job은 SSH 연결을 종료해도 계속 실행된다. Slurm이 없는 전용 GPU 서버라면 `tmux new -s eeg-ablation` 안에서 위 학습 명령을 실행하고 `Ctrl-b`, `d`로 빠져나온다.
 
@@ -166,6 +185,7 @@ squeue -u "$USER"
 - 기존 MJDE+SHPE 출력·gradient 동등성, 공통 tokenizer/decoder 초기화 동등성을 검사했다.
 - 14개 downstream montage에서 CSBrain 연결을 검사했다. 10개 arm의 pretrain → SEED-V strict loading/gradient/optimizer 그룹, ISRUC sequence head도 검사했다.
 - 합성 LMDB로 **기존 학습 엔진**의 사전학습·중단 후 재개·downstream 학습·validation 선택·test 평가를 실행했다. 재개와 연속 실행의 최종 가중치가 정확히 같다.
+- Slurm 실행기 검사 12개에서 네 가지 GPU 배치의 rank 연결, REVE/encoder 제출, 학습 인자 전달, 대기 job 교체와 실행 중인 job 보존을 검사했다. 로컬 CPU 프로세스 4개를 실제 Gloo/DDP로 연결해 gradient 평균과 동일한 optimizer update도 확인했다. 실제 Slurm 스케줄링이나 노드 간 NCCL 통신을 검증한 것은 아니다.
 - 로컬 검증 환경은 Windows / Python 3.12 / PyTorch 2.5.1 CPU다. 새 Python 코드의 Python 3.8 문법과 SSH용 dependency의 Python 3.8 지원, shell 문법을 별도로 확인했다. 실제 서버의 torch 2.0.1 CUDA/BF16/DDP, 실데이터 전체 학습과 성능 수치는 아직 실행하지 않았다.
 
 합성 검사 수치는 `outputs/ablation/synthetic_checks.json`에 저장된다. 이는 성능 비교 결과가 아니다.
