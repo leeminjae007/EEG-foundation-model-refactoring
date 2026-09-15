@@ -1,0 +1,175 @@
+[
+    {
+        "revision":  "b9e961003214326972c567eff390e75b0287e32a",
+        "name":  "cbramod",
+        "files":  [
+                      {
+                          "url":  "https://raw.githubusercontent.com/wjq-learning/CBraMod/b9e961003214326972c567eff390e75b0287e32a/models/__init__.py",
+                          "path":  "models/__init__.py",
+                          "sha256":  "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+                      },
+                      {
+                          "url":  "https://raw.githubusercontent.com/wjq-learning/CBraMod/b9e961003214326972c567eff390e75b0287e32a/models/cbramod.py",
+                          "path":  "models/cbramod.py",
+                          "sha256":  "caa7c5a0e4acd488a6f625b56f7b54dc4e7190d6b68ef5b76dff2cef86874a14"
+                      },
+                      {
+                          "url":  "https://raw.githubusercontent.com/wjq-learning/CBraMod/b9e961003214326972c567eff390e75b0287e32a/models/criss_cross_transformer.py",
+                          "path":  "models/criss_cross_transformer.py",
+                          "sha256":  "90e90b8c98ca7eb543c44e32afc29674d3f71cb090692ad9f82db3a43edf334c"
+                      },
+                      {
+                          "url":  "https://raw.githubusercontent.com/wjq-learning/CBraMod/b9e961003214326972c567eff390e75b0287e32a/LICENSE",
+                          "path":  "LICENSE",
+                          "sha256":  "eb839b706e4d7219842e96d7dc33285844abc794292602deb3498be7b699537c"
+                      }
+                  ],
+        "repository":  "https://github.com/wjq-learning/CBraMod"
+    },
+    {
+        "revision":  "185aee55b24d0410a830df8dd08d03f675616998",
+        "name":  "csbrain",
+        "files":  [
+                      {
+                          "url":  "https://raw.githubusercontent.com/yuchen2199/CSBrain/185aee55b24d0410a830df8dd08d03f675616998/models/__init__.py",
+                          "path":  "models/__init__.py",
+                          "sha256":  "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+                      },
+                      {
+                          "url":  "https://raw.githubusercontent.com/yuchen2199/CSBrain/185aee55b24d0410a830df8dd08d03f675616998/models/CSBrain.py",
+                          "path":  "models/CSBrain.py",
+                          "sha256":  "887fc3184014acef55388fa837d20d48be05725c0dd656e4a14a416fd0a7db2d"
+                      },
+                      {
+                          "url":  "https://raw.githubusercontent.com/yuchen2199/CSBrain/185aee55b24d0410a830df8dd08d03f675616998/models/CSBrain_transformer.py",
+                          "path":  "models/CSBrain_transformer.py",
+                          "sha256":  "7b41e309095ca5eae08c01ba6341cc23554c426c2b610068f31c77ba9bbc9c60"
+                      },
+                      {
+                          "url":  "https://raw.githubusercontent.com/yuchen2199/CSBrain/185aee55b24d0410a830df8dd08d03f675616998/models/CSBrain_transformerlayer.py",
+                          "path":  "models/CSBrain_transformerlayer.py",
+                          "sha256":  "0cb75ebc88befa8dfa9832b8869d36408bd4226fae0926bf175e662ce019f87b"
+                      },
+                      {
+                          "url":  "https://raw.githubusercontent.com/yuchen2199/CSBrain/185aee55b24d0410a830df8dd08d03f675616998/README.md",
+                          "path":  "README.md",
+                          "sha256":  "51b43823fb579d333561298c4a46b5a7eaa0b851b2126878b781672219ba4b3d"
+                      },
+                      {
+                          "path":  "pretrain_main.py",
+                          "url":  "https://raw.githubusercontent.com/yuchen2199/CSBrain/185aee55b24d0410a830df8dd08d03f675616998/pretrain_main.py",
+                          "sha256":  "5d6cc758e013f5e2c2da549582fd81fa295b9050df15198a0ae292d4f4782292"
+                      },
+                      {
+                          "path":  "models/model_for_seedv.py",
+                          "url":  "https://raw.githubusercontent.com/yuchen2199/CSBrain/185aee55b24d0410a830df8dd08d03f675616998/models/model_for_seedv.py",
+                          "sha256":  "878c6c33a5fba08689a929a6c58a9e348e1129488e311f667e9c9d6fb69d68e7"
+                      },
+                      {
+                          "path":  "models/model_for_tuab.py",
+                          "url":  "https://raw.githubusercontent.com/yuchen2199/CSBrain/185aee55b24d0410a830df8dd08d03f675616998/models/model_for_tuab.py",
+                          "sha256":  "5539f6a22c7d2e08781f823eca17c38108187fabbd57050dc5c79c37431da3c7"
+                      },
+                      {
+                          "path":  "models/model_for_tuev.py",
+                          "url":  "https://raw.githubusercontent.com/yuchen2199/CSBrain/185aee55b24d0410a830df8dd08d03f675616998/models/model_for_tuev.py",
+                          "sha256":  "027fcfae8c680490f09947200f2d8db1a2736e598dcc6e7d8d093847cd14fb8e"
+                      },
+                      {
+                          "path":  "models/model_for_bciciv2a.py",
+                          "url":  "https://raw.githubusercontent.com/yuchen2199/CSBrain/185aee55b24d0410a830df8dd08d03f675616998/models/model_for_bciciv2a.py",
+                          "sha256":  "babc4bf0fd20f908e072f590b71d6f73f389ecc5ee572b0010f20af7cc47e4db"
+                      },
+                      {
+                          "path":  "models/model_for_chb.py",
+                          "url":  "https://raw.githubusercontent.com/yuchen2199/CSBrain/185aee55b24d0410a830df8dd08d03f675616998/models/model_for_chb.py",
+                          "sha256":  "0597e8e3505e1faee6e27499bbb0c7b6e452f718702d3c6d7d324aa3b3da2b17"
+                      },
+                      {
+                          "path":  "models/model_for_faced.py",
+                          "url":  "https://raw.githubusercontent.com/yuchen2199/CSBrain/185aee55b24d0410a830df8dd08d03f675616998/models/model_for_faced.py",
+                          "sha256":  "d86720497d38ef36edddbab13d29fc68585dd2484878729d228334c7fc76faf5"
+                      },
+                      {
+                          "path":  "models/model_for_hmc.py",
+                          "url":  "https://raw.githubusercontent.com/yuchen2199/CSBrain/185aee55b24d0410a830df8dd08d03f675616998/models/model_for_hmc.py",
+                          "sha256":  "628f70dab5a596e15575674038e66717fc9f61f9d2fa7d0d1c4f011f1fe725d6"
+                      },
+                      {
+                          "path":  "models/model_for_isruc.py",
+                          "url":  "https://raw.githubusercontent.com/yuchen2199/CSBrain/185aee55b24d0410a830df8dd08d03f675616998/models/model_for_isruc.py",
+                          "sha256":  "8508b3cf538543af2659c4435eae9f6de2a9c743319cedb0e16b5e783b24f95d"
+                      },
+                      {
+                          "path":  "models/model_for_mumtaz.py",
+                          "url":  "https://raw.githubusercontent.com/yuchen2199/CSBrain/185aee55b24d0410a830df8dd08d03f675616998/models/model_for_mumtaz.py",
+                          "sha256":  "29ab7da4d9874bf05e33e7a419b28c04bd007cd324e807000170865afafc30c5"
+                      },
+                      {
+                          "path":  "models/model_for_physio.py",
+                          "url":  "https://raw.githubusercontent.com/yuchen2199/CSBrain/185aee55b24d0410a830df8dd08d03f675616998/models/model_for_physio.py",
+                          "sha256":  "6b1a062835fb9587879d77c275104304edffc20b9452ed79738ee6ea12685b48"
+                      },
+                      {
+                          "path":  "models/model_for_seedvig.py",
+                          "url":  "https://raw.githubusercontent.com/yuchen2199/CSBrain/185aee55b24d0410a830df8dd08d03f675616998/models/model_for_seedvig.py",
+                          "sha256":  "da561d436b5a3da47976dd452b4d59ff362a8727f255907ff4a258c88de99785"
+                      },
+                      {
+                          "path":  "models/model_for_siena.py",
+                          "url":  "https://raw.githubusercontent.com/yuchen2199/CSBrain/185aee55b24d0410a830df8dd08d03f675616998/models/model_for_siena.py",
+                          "sha256":  "a7024fb1d404fb50be621ae744e4b59d99945dc90f0e811e2f40b057e98b2c40"
+                      },
+                      {
+                          "path":  "models/model_for_speech.py",
+                          "url":  "https://raw.githubusercontent.com/yuchen2199/CSBrain/185aee55b24d0410a830df8dd08d03f675616998/models/model_for_speech.py",
+                          "sha256":  "9fd6e6c3b13cbe970047322ce29dfa78d1854893abcb0e5067f35adfd061c17f"
+                      },
+                      {
+                          "path":  "models/model_for_stress.py",
+                          "url":  "https://raw.githubusercontent.com/yuchen2199/CSBrain/185aee55b24d0410a830df8dd08d03f675616998/models/model_for_stress.py",
+                          "sha256":  "6336fe40f3b8c0d09e00d94b201b2b8a12d164a270beb64dda98f779a3cb973d"
+                      }
+                  ],
+        "repository":  "https://github.com/yuchen2199/CSBrain"
+    },
+    {
+        "revision":  "c431221e6cfd23dbfa9950e0180682fb322b0548",
+        "name":  "labram",
+        "files":  [
+                      {
+                          "url":  "https://raw.githubusercontent.com/935963004/LaBraM/c431221e6cfd23dbfa9950e0180682fb322b0548/modeling_finetune.py",
+                          "path":  "modeling_finetune.py",
+                          "sha256":  "7b3514c9a661ebd417a2dd9834a9f2fab0a2e518c8212c73ebebaaa165c29d88"
+                      },
+                      {
+                          "url":  "https://raw.githubusercontent.com/935963004/LaBraM/c431221e6cfd23dbfa9950e0180682fb322b0548/LICENSE",
+                          "path":  "LICENSE",
+                          "sha256":  "bc3f03e2c9071fb40507f5c575d95eeaa98d07c54c54fb2855942b2a729adc71"
+                      }
+                  ],
+        "repository":  "https://github.com/935963004/LaBraM"
+    },
+    {
+        "revision":  "06a7059a07c3dabd80aee60c3dbc1eca4bdbe1c7",
+        "name":  "reve",
+        "files":  [
+                      {
+                          "url":  "https://raw.githubusercontent.com/elouayas/reve_eeg/06a7059a07c3dabd80aee60c3dbc1eca4bdbe1c7/src/models/encoder.py",
+                          "path":  "src/models/encoder.py",
+                          "sha256":  "933684a3306e16c16926cead0fc8c8c0a9ae99ad9dfaf54dee860c5b335d1b6c"
+                      },
+                      {
+                          "url":  "https://raw.githubusercontent.com/elouayas/reve_eeg/06a7059a07c3dabd80aee60c3dbc1eca4bdbe1c7/src/models/backbone.py",
+                          "path":  "src/models/backbone.py",
+                          "sha256":  "632ecd10ddb5efcc6f50a7207b0aa3934e7304438eb3f1db1edfefc3fab3371f"
+                      },
+                      {
+                          "url":  "https://raw.githubusercontent.com/elouayas/reve_eeg/06a7059a07c3dabd80aee60c3dbc1eca4bdbe1c7/LICENSE",
+                          "path":  "LICENSE",
+                          "sha256":  "21edfbcf8e7aad3e958e8c17405f47626ec5e984649af6461e29947f4cdc1e8b"
+                      }
+                  ],
+        "repository":  "https://github.com/elouayas/reve_eeg"
+    }
+]

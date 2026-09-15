@@ -1,0 +1,7 @@
+base_config: configs/pretrain.yaml
+ablation:
+  name: encoder_mjde_lite
+  encoder: mjde_lite
+  position: shpe
+  mask_mode: dense_zero
+  pe_scope: both

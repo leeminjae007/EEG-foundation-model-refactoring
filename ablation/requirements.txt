@@ -1,0 +1,7 @@
+# Add to the existing Python 3.8 / torch 2.0.1 environment.
+# Pin torchvision as well so installing timm cannot upgrade torch indirectly.
+torchvision==0.15.2
+timm==0.4.12
+einops==0.8.1
+matplotlib==3.7.5
+threadpoolctl==3.5.0

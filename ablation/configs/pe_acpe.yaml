@@ -1,0 +1,7 @@
+base_config: configs/pretrain.yaml
+ablation:
+  name: pe_acpe
+  encoder: mjde
+  position: acpe
+  mask_mode: context_only
+  pe_scope: both
