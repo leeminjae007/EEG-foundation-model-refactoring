@@ -95,6 +95,8 @@ python -m ablation.pretrain \
 
 서버에 기존 `.venv`가 없다면 프로젝트의 `scripts/install_environment.py`/기존 환경 설치 안내를 먼저 따른다. `ablation/requirements.txt`는 프로젝트 전체 의존성 설치 파일이 아니다.
 
+서버 torch는 CUDA 11.8 빌드이므로 torchvision도 `0.15.2+cu118`로 고정한다. 일반 PyPI `0.15.2`의 CUDA 11.7 빌드는 LaBraM의 timm import에서 CUDA 버전 불일치를 일으킨다. 잘못 설치된 환경은 `python -m pip install --no-deps --force-reinstall torchvision==0.15.2+cu118 --index-url https://download.pytorch.org/whl/cu118`로 torchvision을 교체한다. [공식 PyTorch 2.0.1 설치 조합](https://docs.pytorch.org/get-started/previous-versions/).
+
 ### 2. 한 비교군 사전학습
 
 ```bash

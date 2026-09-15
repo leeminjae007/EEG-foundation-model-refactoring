@@ -1,6 +1,8 @@
-# Add to the existing Python 3.8 / torch 2.0.1 environment.
+# Add to the existing Python 3.8 / torch 2.0.1 CUDA 11.8 environment.
 # Pin torchvision as well so installing timm cannot upgrade torch indirectly.
-torchvision==0.15.2
+# PyPI's plain 0.15.2 wheel uses CUDA 11.7 and fails with this server's torch.
+--extra-index-url https://download.pytorch.org/whl/cu118
+torchvision==0.15.2+cu118
 timm==0.4.12
 einops==0.8.1
 matplotlib==3.7.5
