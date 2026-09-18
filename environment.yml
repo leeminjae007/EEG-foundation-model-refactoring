@@ -21,8 +21,8 @@ dependencies:
   - pandas=1.5.3
   - scikit-learn=1.2.2
   - h5py=3.8.0
-  - matplotlib=3.7.5
   - pip:
+      - matplotlib==3.7.5
       - mne==1.6.1
       - lmdb==1.4.1
       - PyYAML==6.0.3
