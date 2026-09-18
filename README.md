@@ -74,6 +74,16 @@ source scripts/activate.sh
 
 ## 실행
 
+### 격리된 실험을 한 번에 제출
+
+아래 명령 하나가 뉴욕 시간 기준 결과 폴더와 source/config snapshot을 만들고, A100 long pretrain, held downstream 50-seed array, 그리고 CPU-only release monitor를 함께 제출합니다.
+
+```bash
+python scripts/launch_experiment_pretrain.py gr2-d2-static
+```
+
+Downstream array는 처음에는 `JobHeldUser` 상태입니다. CPU monitor가 epoch-40 checkpoint의 strict model loading, config, optimizer/scheduler, 4-rank RNG 검증을 통과한 뒤에만 array를 release합니다. Pretrain 실패·취소·검증 실패 시에는 downstream을 시작하지 않고 hold를 유지합니다. 폴더만 미리 생성·검토하려면 `--prepare-only`를 덧붙입니다.
+
 가중치 이름이 달라졌으므로 모델 밖에서 한 번 변환합니다. 이 작업 공간에는 변환된 epoch-40 가중치도 준비했습니다. 변환기는 누락·중복·shape 오류를 검사하고 strict loading으로 확인하며, 기존 destination을 덮어쓰지 않습니다.
 
 ```bash
