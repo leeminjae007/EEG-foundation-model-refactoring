@@ -1,0 +1,398 @@
+{
+  "status": "monitoring",
+  "checked_utc": "2026-09-16T03:46:35.470305+00:00",
+  "missing_count": 65,
+  "missing": [
+    {
+      "dataset": "TUAB",
+      "slug": "tuab",
+      "seed": 42,
+      "path": "/gpfs/data/oermannlab/users/ml10266/workspace/EEG-founation-model/outputs/ablation/encoder_csbrain/downstream_no_seedvig_20260915/downstream/tuab_seed42/result.json"
+    },
+    {
+      "dataset": "TUAB",
+      "slug": "tuab",
+      "seed": 1234,
+      "path": "/gpfs/data/oermannlab/users/ml10266/workspace/EEG-founation-model/outputs/ablation/encoder_csbrain/downstream_no_seedvig_20260915/downstream/tuab_seed1234/result.json"
+    },
+    {
+      "dataset": "TUAB",
+      "slug": "tuab",
+      "seed": 696,
+      "path": "/gpfs/data/oermannlab/users/ml10266/workspace/EEG-founation-model/outputs/ablation/encoder_csbrain/downstream_no_seedvig_20260915/downstream/tuab_seed696/result.json"
+    },
+    {
+      "dataset": "TUAB",
+      "slug": "tuab",
+      "seed": 1001,
+      "path": "/gpfs/data/oermannlab/users/ml10266/workspace/EEG-founation-model/outputs/ablation/encoder_csbrain/downstream_no_seedvig_20260915/downstream/tuab_seed1001/result.json"
+    },
+    {
+      "dataset": "TUAB",
+      "slug": "tuab",
+      "seed": 3407,
+      "path": "/gpfs/data/oermannlab/users/ml10266/workspace/EEG-founation-model/outputs/ablation/encoder_csbrain/downstream_no_seedvig_20260915/downstream/tuab_seed3407/result.json"
+    },
+    {
+      "dataset": "TUEV",
+      "slug": "tuev",
+      "seed": 42,
+      "path": "/gpfs/data/oermannlab/users/ml10266/workspace/EEG-founation-model/outputs/ablation/encoder_csbrain/downstream_no_seedvig_20260915/downstream/tuev_seed42/result.json"
+    },
+    {
+      "dataset": "TUEV",
+      "slug": "tuev",
+      "seed": 1234,
+      "path": "/gpfs/data/oermannlab/users/ml10266/workspace/EEG-founation-model/outputs/ablation/encoder_csbrain/downstream_no_seedvig_20260915/downstream/tuev_seed1234/result.json"
+    },
+    {
+      "dataset": "TUEV",
+      "slug": "tuev",
+      "seed": 696,
+      "path": "/gpfs/data/oermannlab/users/ml10266/workspace/EEG-founation-model/outputs/ablation/encoder_csbrain/downstream_no_seedvig_20260915/downstream/tuev_seed696/result.json"
+    },
+    {
+      "dataset": "TUEV",
+      "slug": "tuev",
+      "seed": 1001,
+      "path": "/gpfs/data/oermannlab/users/ml10266/workspace/EEG-founation-model/outputs/ablation/encoder_csbrain/downstream_no_seedvig_20260915/downstream/tuev_seed1001/result.json"
+    },
+    {
+      "dataset": "TUEV",
+      "slug": "tuev",
+      "seed": 3407,
+      "path": "/gpfs/data/oermannlab/users/ml10266/workspace/EEG-founation-model/outputs/ablation/encoder_csbrain/downstream_no_seedvig_20260915/downstream/tuev_seed3407/result.json"
+    },
+    {
+      "dataset": "CHB-MIT",
+      "slug": "chb",
+      "seed": 42,
+      "path": "/gpfs/data/oermannlab/users/ml10266/workspace/EEG-founation-model/outputs/ablation/encoder_csbrain/downstream_no_seedvig_20260915/downstream/chb_seed42/result.json"
+    },
+    {
+      "dataset": "CHB-MIT",
+      "slug": "chb",
+      "seed": 1234,
+      "path": "/gpfs/data/oermannlab/users/ml10266/workspace/EEG-founation-model/outputs/ablation/encoder_csbrain/downstream_no_seedvig_20260915/downstream/chb_seed1234/result.json"
+    },
+    {
+      "dataset": "CHB-MIT",
+      "slug": "chb",
+      "seed": 696,
+      "path": "/gpfs/data/oermannlab/users/ml10266/workspace/EEG-founation-model/outputs/ablation/encoder_csbrain/downstream_no_seedvig_20260915/downstream/chb_seed696/result.json"
+    },
+    {
+      "dataset": "CHB-MIT",
+      "slug": "chb",
+      "seed": 1001,
+      "path": "/gpfs/data/oermannlab/users/ml10266/workspace/EEG-founation-model/outputs/ablation/encoder_csbrain/downstream_no_seedvig_20260915/downstream/chb_seed1001/result.json"
+    },
+    {
+      "dataset": "CHB-MIT",
+      "slug": "chb",
+      "seed": 3407,
+      "path": "/gpfs/data/oermannlab/users/ml10266/workspace/EEG-founation-model/outputs/ablation/encoder_csbrain/downstream_no_seedvig_20260915/downstream/chb_seed3407/result.json"
+    },
+    {
+      "dataset": "SEED-V",
+      "slug": "seedv",
+      "seed": 42,
+      "path": "/gpfs/data/oermannlab/users/ml10266/workspace/EEG-founation-model/outputs/ablation/encoder_csbrain/downstream_no_seedvig_20260915/downstream/seedv_seed42/result.json"
+    },
+    {
+      "dataset": "SEED-V",
+      "slug": "seedv",
+      "seed": 1234,
+      "path": "/gpfs/data/oermannlab/users/ml10266/workspace/EEG-founation-model/outputs/ablation/encoder_csbrain/downstream_no_seedvig_20260915/downstream/seedv_seed1234/result.json"
+    },
+    {
+      "dataset": "SEED-V",
+      "slug": "seedv",
+      "seed": 696,
+      "path": "/gpfs/data/oermannlab/users/ml10266/workspace/EEG-founation-model/outputs/ablation/encoder_csbrain/downstream_no_seedvig_20260915/downstream/seedv_seed696/result.json"
+    },
+    {
+      "dataset": "SEED-V",
+      "slug": "seedv",
+      "seed": 1001,
+      "path": "/gpfs/data/oermannlab/users/ml10266/workspace/EEG-founation-model/outputs/ablation/encoder_csbrain/downstream_no_seedvig_20260915/downstream/seedv_seed1001/result.json"
+    },
+    {
+      "dataset": "SEED-V",
+      "slug": "seedv",
+      "seed": 3407,
+      "path": "/gpfs/data/oermannlab/users/ml10266/workspace/EEG-founation-model/outputs/ablation/encoder_csbrain/downstream_no_seedvig_20260915/downstream/seedv_seed3407/result.json"
+    },
+    {
+      "dataset": "FACED",
+      "slug": "faced",
+      "seed": 42,
+      "path": "/gpfs/data/oermannlab/users/ml10266/workspace/EEG-founation-model/outputs/ablation/encoder_csbrain/downstream_no_seedvig_20260915/downstream/faced_seed42/result.json"
+    },
+    {
+      "dataset": "FACED",
+      "slug": "faced",
+      "seed": 1234,
+      "path": "/gpfs/data/oermannlab/users/ml10266/workspace/EEG-founation-model/outputs/ablation/encoder_csbrain/downstream_no_seedvig_20260915/downstream/faced_seed1234/result.json"
+    },
+    {
+      "dataset": "FACED",
+      "slug": "faced",
+      "seed": 696,
+      "path": "/gpfs/data/oermannlab/users/ml10266/workspace/EEG-founation-model/outputs/ablation/encoder_csbrain/downstream_no_seedvig_20260915/downstream/faced_seed696/result.json"
+    },
+    {
+      "dataset": "FACED",
+      "slug": "faced",
+      "seed": 1001,
+      "path": "/gpfs/data/oermannlab/users/ml10266/workspace/EEG-founation-model/outputs/ablation/encoder_csbrain/downstream_no_seedvig_20260915/downstream/faced_seed1001/result.json"
+    },
+    {
+      "dataset": "FACED",
+      "slug": "faced",
+      "seed": 3407,
+      "path": "/gpfs/data/oermannlab/users/ml10266/workspace/EEG-founation-model/outputs/ablation/encoder_csbrain/downstream_no_seedvig_20260915/downstream/faced_seed3407/result.json"
+    },
+    {
+      "dataset": "Mumtaz",
+      "slug": "mumtaz",
+      "seed": 42,
+      "path": "/gpfs/data/oermannlab/users/ml10266/workspace/EEG-founation-model/outputs/ablation/encoder_csbrain/downstream_no_seedvig_20260915/downstream/mumtaz_seed42/result.json"
+    },
+    {
+      "dataset": "Mumtaz",
+      "slug": "mumtaz",
+      "seed": 1234,
+      "path": "/gpfs/data/oermannlab/users/ml10266/workspace/EEG-founation-model/outputs/ablation/encoder_csbrain/downstream_no_seedvig_20260915/downstream/mumtaz_seed1234/result.json"
+    },
+    {
+      "dataset": "Mumtaz",
+      "slug": "mumtaz",
+      "seed": 696,
+      "path": "/gpfs/data/oermannlab/users/ml10266/workspace/EEG-founation-model/outputs/ablation/encoder_csbrain/downstream_no_seedvig_20260915/downstream/mumtaz_seed696/result.json"
+    },
+    {
+      "dataset": "Mumtaz",
+      "slug": "mumtaz",
+      "seed": 1001,
+      "path": "/gpfs/data/oermannlab/users/ml10266/workspace/EEG-founation-model/outputs/ablation/encoder_csbrain/downstream_no_seedvig_20260915/downstream/mumtaz_seed1001/result.json"
+    },
+    {
+      "dataset": "Mumtaz",
+      "slug": "mumtaz",
+      "seed": 3407,
+      "path": "/gpfs/data/oermannlab/users/ml10266/workspace/EEG-founation-model/outputs/ablation/encoder_csbrain/downstream_no_seedvig_20260915/downstream/mumtaz_seed3407/result.json"
+    },
+    {
+      "dataset": "MentalArithmetic",
+      "slug": "mentalarithmetic",
+      "seed": 42,
+      "path": "/gpfs/data/oermannlab/users/ml10266/workspace/EEG-founation-model/outputs/ablation/encoder_csbrain/downstream_no_seedvig_20260915/downstream/mentalarithmetic_seed42/result.json"
+    },
+    {
+      "dataset": "MentalArithmetic",
+      "slug": "mentalarithmetic",
+      "seed": 1234,
+      "path": "/gpfs/data/oermannlab/users/ml10266/workspace/EEG-founation-model/outputs/ablation/encoder_csbrain/downstream_no_seedvig_20260915/downstream/mentalarithmetic_seed1234/result.json"
+    },
+    {
+      "dataset": "MentalArithmetic",
+      "slug": "mentalarithmetic",
+      "seed": 696,
+      "path": "/gpfs/data/oermannlab/users/ml10266/workspace/EEG-founation-model/outputs/ablation/encoder_csbrain/downstream_no_seedvig_20260915/downstream/mentalarithmetic_seed696/result.json"
+    },
+    {
+      "dataset": "MentalArithmetic",
+      "slug": "mentalarithmetic",
+      "seed": 1001,
+      "path": "/gpfs/data/oermannlab/users/ml10266/workspace/EEG-founation-model/outputs/ablation/encoder_csbrain/downstream_no_seedvig_20260915/downstream/mentalarithmetic_seed1001/result.json"
+    },
+    {
+      "dataset": "MentalArithmetic",
+      "slug": "mentalarithmetic",
+      "seed": 3407,
+      "path": "/gpfs/data/oermannlab/users/ml10266/workspace/EEG-founation-model/outputs/ablation/encoder_csbrain/downstream_no_seedvig_20260915/downstream/mentalarithmetic_seed3407/result.json"
+    },
+    {
+      "dataset": "BCIC-IV-2a",
+      "slug": "bciciv2a",
+      "seed": 42,
+      "path": "/gpfs/data/oermannlab/users/ml10266/workspace/EEG-founation-model/outputs/ablation/encoder_csbrain/downstream_no_seedvig_20260915/downstream/bciciv2a_seed42/result.json"
+    },
+    {
+      "dataset": "BCIC-IV-2a",
+      "slug": "bciciv2a",
+      "seed": 1234,
+      "path": "/gpfs/data/oermannlab/users/ml10266/workspace/EEG-founation-model/outputs/ablation/encoder_csbrain/downstream_no_seedvig_20260915/downstream/bciciv2a_seed1234/result.json"
+    },
+    {
+      "dataset": "BCIC-IV-2a",
+      "slug": "bciciv2a",
+      "seed": 696,
+      "path": "/gpfs/data/oermannlab/users/ml10266/workspace/EEG-founation-model/outputs/ablation/encoder_csbrain/downstream_no_seedvig_20260915/downstream/bciciv2a_seed696/result.json"
+    },
+    {
+      "dataset": "BCIC-IV-2a",
+      "slug": "bciciv2a",
+      "seed": 1001,
+      "path": "/gpfs/data/oermannlab/users/ml10266/workspace/EEG-founation-model/outputs/ablation/encoder_csbrain/downstream_no_seedvig_20260915/downstream/bciciv2a_seed1001/result.json"
+    },
+    {
+      "dataset": "BCIC-IV-2a",
+      "slug": "bciciv2a",
+      "seed": 3407,
+      "path": "/gpfs/data/oermannlab/users/ml10266/workspace/EEG-founation-model/outputs/ablation/encoder_csbrain/downstream_no_seedvig_20260915/downstream/bciciv2a_seed3407/result.json"
+    },
+    {
+      "dataset": "PhysioNet-MI",
+      "slug": "physionet_mi",
+      "seed": 42,
+      "path": "/gpfs/data/oermannlab/users/ml10266/workspace/EEG-founation-model/outputs/ablation/encoder_csbrain/downstream_no_seedvig_20260915/downstream/physionet_mi_seed42/result.json"
+    },
+    {
+      "dataset": "PhysioNet-MI",
+      "slug": "physionet_mi",
+      "seed": 1234,
+      "path": "/gpfs/data/oermannlab/users/ml10266/workspace/EEG-founation-model/outputs/ablation/encoder_csbrain/downstream_no_seedvig_20260915/downstream/physionet_mi_seed1234/result.json"
+    },
+    {
+      "dataset": "PhysioNet-MI",
+      "slug": "physionet_mi",
+      "seed": 696,
+      "path": "/gpfs/data/oermannlab/users/ml10266/workspace/EEG-founation-model/outputs/ablation/encoder_csbrain/downstream_no_seedvig_20260915/downstream/physionet_mi_seed696/result.json"
+    },
+    {
+      "dataset": "PhysioNet-MI",
+      "slug": "physionet_mi",
+      "seed": 1001,
+      "path": "/gpfs/data/oermannlab/users/ml10266/workspace/EEG-founation-model/outputs/ablation/encoder_csbrain/downstream_no_seedvig_20260915/downstream/physionet_mi_seed1001/result.json"
+    },
+    {
+      "dataset": "PhysioNet-MI",
+      "slug": "physionet_mi",
+      "seed": 3407,
+      "path": "/gpfs/data/oermannlab/users/ml10266/workspace/EEG-founation-model/outputs/ablation/encoder_csbrain/downstream_no_seedvig_20260915/downstream/physionet_mi_seed3407/result.json"
+    },
+    {
+      "dataset": "BCIC2020-3",
+      "slug": "speech",
+      "seed": 42,
+      "path": "/gpfs/data/oermannlab/users/ml10266/workspace/EEG-founation-model/outputs/ablation/encoder_csbrain/downstream_no_seedvig_20260915/downstream/speech_seed42/result.json"
+    },
+    {
+      "dataset": "BCIC2020-3",
+      "slug": "speech",
+      "seed": 1234,
+      "path": "/gpfs/data/oermannlab/users/ml10266/workspace/EEG-founation-model/outputs/ablation/encoder_csbrain/downstream_no_seedvig_20260915/downstream/speech_seed1234/result.json"
+    },
+    {
+      "dataset": "BCIC2020-3",
+      "slug": "speech",
+      "seed": 696,
+      "path": "/gpfs/data/oermannlab/users/ml10266/workspace/EEG-founation-model/outputs/ablation/encoder_csbrain/downstream_no_seedvig_20260915/downstream/speech_seed696/result.json"
+    },
+    {
+      "dataset": "BCIC2020-3",
+      "slug": "speech",
+      "seed": 1001,
+      "path": "/gpfs/data/oermannlab/users/ml10266/workspace/EEG-founation-model/outputs/ablation/encoder_csbrain/downstream_no_seedvig_20260915/downstream/speech_seed1001/result.json"
+    },
+    {
+      "dataset": "BCIC2020-3",
+      "slug": "speech",
+      "seed": 3407,
+      "path": "/gpfs/data/oermannlab/users/ml10266/workspace/EEG-founation-model/outputs/ablation/encoder_csbrain/downstream_no_seedvig_20260915/downstream/speech_seed3407/result.json"
+    },
+    {
+      "dataset": "ISRUC",
+      "slug": "isruc",
+      "seed": 42,
+      "path": "/gpfs/data/oermannlab/users/ml10266/workspace/EEG-founation-model/outputs/ablation/encoder_csbrain/downstream_no_seedvig_20260915/downstream/isruc_seed42/result.json"
+    },
+    {
+      "dataset": "ISRUC",
+      "slug": "isruc",
+      "seed": 1234,
+      "path": "/gpfs/data/oermannlab/users/ml10266/workspace/EEG-founation-model/outputs/ablation/encoder_csbrain/downstream_no_seedvig_20260915/downstream/isruc_seed1234/result.json"
+    },
+    {
+      "dataset": "ISRUC",
+      "slug": "isruc",
+      "seed": 696,
+      "path": "/gpfs/data/oermannlab/users/ml10266/workspace/EEG-founation-model/outputs/ablation/encoder_csbrain/downstream_no_seedvig_20260915/downstream/isruc_seed696/result.json"
+    },
+    {
+      "dataset": "ISRUC",
+      "slug": "isruc",
+      "seed": 1001,
+      "path": "/gpfs/data/oermannlab/users/ml10266/workspace/EEG-founation-model/outputs/ablation/encoder_csbrain/downstream_no_seedvig_20260915/downstream/isruc_seed1001/result.json"
+    },
+    {
+      "dataset": "ISRUC",
+      "slug": "isruc",
+      "seed": 3407,
+      "path": "/gpfs/data/oermannlab/users/ml10266/workspace/EEG-founation-model/outputs/ablation/encoder_csbrain/downstream_no_seedvig_20260915/downstream/isruc_seed3407/result.json"
+    },
+    {
+      "dataset": "HMC",
+      "slug": "hmc",
+      "seed": 42,
+      "path": "/gpfs/data/oermannlab/users/ml10266/workspace/EEG-founation-model/outputs/ablation/encoder_csbrain/downstream_no_seedvig_20260915/downstream/hmc_seed42/result.json"
+    },
+    {
+      "dataset": "HMC",
+      "slug": "hmc",
+      "seed": 1234,
+      "path": "/gpfs/data/oermannlab/users/ml10266/workspace/EEG-founation-model/outputs/ablation/encoder_csbrain/downstream_no_seedvig_20260915/downstream/hmc_seed1234/result.json"
+    },
+    {
+      "dataset": "HMC",
+      "slug": "hmc",
+      "seed": 696,
+      "path": "/gpfs/data/oermannlab/users/ml10266/workspace/EEG-founation-model/outputs/ablation/encoder_csbrain/downstream_no_seedvig_20260915/downstream/hmc_seed696/result.json"
+    },
+    {
+      "dataset": "HMC",
+      "slug": "hmc",
+      "seed": 1001,
+      "path": "/gpfs/data/oermannlab/users/ml10266/workspace/EEG-founation-model/outputs/ablation/encoder_csbrain/downstream_no_seedvig_20260915/downstream/hmc_seed1001/result.json"
+    },
+    {
+      "dataset": "HMC",
+      "slug": "hmc",
+      "seed": 3407,
+      "path": "/gpfs/data/oermannlab/users/ml10266/workspace/EEG-founation-model/outputs/ablation/encoder_csbrain/downstream_no_seedvig_20260915/downstream/hmc_seed3407/result.json"
+    },
+    {
+      "dataset": "Siena",
+      "slug": "siena",
+      "seed": 42,
+      "path": "/gpfs/data/oermannlab/users/ml10266/workspace/EEG-founation-model/outputs/ablation/encoder_csbrain/downstream_no_seedvig_20260915/downstream/siena_seed42/result.json"
+    },
+    {
+      "dataset": "Siena",
+      "slug": "siena",
+      "seed": 1234,
+      "path": "/gpfs/data/oermannlab/users/ml10266/workspace/EEG-founation-model/outputs/ablation/encoder_csbrain/downstream_no_seedvig_20260915/downstream/siena_seed1234/result.json"
+    },
+    {
+      "dataset": "Siena",
+      "slug": "siena",
+      "seed": 696,
+      "path": "/gpfs/data/oermannlab/users/ml10266/workspace/EEG-founation-model/outputs/ablation/encoder_csbrain/downstream_no_seedvig_20260915/downstream/siena_seed696/result.json"
+    },
+    {
+      "dataset": "Siena",
+      "slug": "siena",
+      "seed": 1001,
+      "path": "/gpfs/data/oermannlab/users/ml10266/workspace/EEG-founation-model/outputs/ablation/encoder_csbrain/downstream_no_seedvig_20260915/downstream/siena_seed1001/result.json"
+    },
+    {
+      "dataset": "Siena",
+      "slug": "siena",
+      "seed": 3407,
+      "path": "/gpfs/data/oermannlab/users/ml10266/workspace/EEG-founation-model/outputs/ablation/encoder_csbrain/downstream_no_seedvig_20260915/downstream/siena_seed3407/result.json"
+    }
+  ],
+  "slurm": "27498381|PENDING|0:0\n27498394|PENDING|0:0\n"
+}

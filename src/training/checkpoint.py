@@ -30,8 +30,12 @@ def save_checkpoint(path, model, optimizer, scheduler, epoch, config, states, ex
     temporary.replace(path)
 
 
-def load_checkpoint(path, model, optimizer, scheduler, device, rank, expected_masking=None):
+def load_checkpoint(path, model, optimizer, scheduler, device, rank, expected_masking=None,
+                    expected_pretrain_rng=None):
     payload = torch.load(path, map_location="cpu")
+    if expected_pretrain_rng is not None:
+        from src.training.pretrain_rng import validate_pretrain_rng
+        validate_pretrain_rng(payload["config"], {"runtime": {"pretrain_rank_rng": expected_pretrain_rng}})
     if expected_masking is not None:
         saved = dict(payload["config"]["masking"])
         expected = dict(expected_masking)

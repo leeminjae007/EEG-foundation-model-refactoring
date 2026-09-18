@@ -14,7 +14,6 @@ if [[ ! -f outputs/gr9_1_epoch40.pth ]]; then
 fi
 .venv/bin/python -m pytest tests/test_equivalence.py tests/test_downstream.py tests/test_schedule.py tests/test_geometry.py -q
 .venv/bin/python pretrain.py --device cpu --smoke
-.venv/bin/python finetune.py --config configs/downstream/gr9-1_warmup5_seedv_seed42.yaml --device cpu --smoke
-.venv/bin/python finetune.py --config configs/downstream/gr9-1_warmup5_mentalarithmetic_seed42.yaml --device cpu --smoke
-.venv/bin/python finetune.py --config configs/downstream/gr9-1_warmup5_seedvig_seed42.yaml --device cpu --smoke
+.venv/bin/python finetune.py --config configs/downstream/gr9-1_seedv_seed42.yaml --device cpu --smoke
+.venv/bin/python finetune.py --config configs/downstream/gr9-1_mentalarithmetic_seed42.yaml --device cpu --smoke
 bash scripts/run_final_checks.sh

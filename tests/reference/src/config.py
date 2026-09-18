@@ -17,15 +17,13 @@ DOWNSTREAM_SECTIONS = (
     "lineage",
 )
 DOWNSTREAM_DATASETS = {
-    "bciciv2a", "chb", "faced", "hmc", "isruc", "mumtaz", "physio", "seed-v",
-    "seed-vig", "siena", "speech", "stress", "tuab", "tuev",
+    "bciciv2a", "chb", "faced", "hmc", "isruc", "physio", "seed-v",
+    "siena", "stress", "tuab", "tuev",
 }
 OUTPUT_ROOTS = (
     Path("/gpfs/data/oermannlab/users/ml10266/workspace/eeg-foundation-model/outputs"),
     Path("/gpfs/data/oermannlab/users/ml10266/workspace/ijepa/outputs"),
 )
-SEEDVIG_ROOT = Path("/gpfs/data/oermannlab/users/ml10266/Data/eeg_foundation_downstream")
-SEEDVIG_PATH = Path("SEED-VIG/processed_cbramod_subject_split")
 
 
 def _check(condition, message):
@@ -50,29 +48,6 @@ def _override_output_root(config):
             continue
         config["runtime"]["output_dir"] = str(Path(override) / relative)
         return
-
-
-def _validate_seedvig(data):
-    _check(Path(data["root"]) == SEEDVIG_ROOT, "incorrect SEED-VIG root")
-    _check(
-        Path(data["processed_path"]) == SEEDVIG_PATH,
-        "SEED-VIG must use the GR5 subject-disjoint split",
-    )
-    manifest_path = SEEDVIG_ROOT / SEEDVIG_PATH / "split_manifest.json"
-    _check(manifest_path.is_file(), "SEED-VIG split manifest is missing")
-    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
-    expected = {
-        "train_subject_ids": list(range(1, 14)),
-        "val_subject_ids": list(range(14, 18)),
-        "test_subject_ids": list(range(18, 22)),
-        "sample_counts": {"train": 13275, "val": 3540, "test": 3540},
-    }
-    _check(
-        manifest.get("protocol_id") == "gr5_subject_disjoint",
-        "incorrect SEED-VIG protocol",
-    )
-    for key, value in expected.items():
-        _check(manifest.get(key) == value, f"incorrect SEED-VIG {key}")
 
 
 def load_pretrain_config(path):
@@ -622,17 +597,10 @@ def load_downstream_config(path):
                "bad class_balance_beta")
 
     _check(data["dataset"] in DOWNSTREAM_DATASETS, "unsupported dataset")
-    if data["dataset"] == "seed-vig":
-        _validate_seedvig(data)
-        _check(
-            optimization["selection_metric"] == "r2",
-            "SEED-VIG must select validation R2",
-        )
-    else:
-        _check(
-            optimization["selection_metric"] == "balanced_accuracy",
-            "classification tasks must select validation balanced accuracy",
-        )
+    _check(
+        optimization["selection_metric"] == "balanced_accuracy",
+        "classification tasks must select validation balanced accuracy",
+    )
     _check(model["type"] == "eeg_mae", "only EEG-MAE downstream is retained")
     _check(model.get("transfer_mode", "full") in {"full", "frozen", "random"},
            "unsupported transfer control")
@@ -654,10 +622,8 @@ def load_downstream_config(path):
         and optimization["mixed_precision"] == "bf16",
         "unsupported downstream optimization",
     )
-    _check(not optimization.get("warmup_ratio", 0.0), "use explicit warmup_epochs")
-    warmup_epochs = optimization.get("warmup_epochs", 0)
-    _check(isinstance(warmup_epochs, (int, float))
-           and 0 <= warmup_epochs < optimization["epochs"], "bad warmup_epochs")
+    _check("warmup_ratio" not in optimization and "warmup_epochs" not in optimization,
+           "downstream warmup is not supported")
     metrics = {
         "balanced_accuracy", "weighted_f1", "kappa", "auroc", "auprc",
         "pearson", "r2", "rmse",

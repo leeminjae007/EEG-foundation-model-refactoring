@@ -3,5 +3,4 @@ ablation:
   name: pe_shpe
   encoder: mjde
   position: shpe
-  mask_mode: context_only
   pe_scope: both

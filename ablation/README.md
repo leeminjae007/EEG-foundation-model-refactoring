@@ -4,19 +4,55 @@
 
 ## 비교군
 
-### Encoder comparison
+### Encoder comparison — twelve native blocks, common context masking
 
-| 설정 파일 (`ablation/configs/`) | 사용한 인코더 | 인코더 파라미터 | 전체 사전학습 파라미터 |
-| --- | --- | ---: | ---: |
-| `encoder_labram.yaml` | LaBraM base, 12 blocks, 10 heads, width 200 | 5,795,160 | 6,620,790 |
-| `encoder_cbramod.yaml` | CBraMod 원본 criss-cross encoder, 12 layers | 4,831,200 | 5,656,830 |
-| `encoder_csbrain.yaml` | CSBrain 원본 temporal/brain embedding + 12 layers | 8,809,200 | 9,634,830 |
-| `encoder_mjde.yaml` | 현재 MJDE, 3 stages / 12 blocks | 5,787,200 | 6,612,830 |
-| `encoder_mjde_lite.yaml` | 현재 MJDE의 첫 stage / 4 blocks | 1,929,200 | 2,754,830 |
+The active comparison keeps each model's native attention projections, block norms,
+FFNs, residual order and initialization, with twelve blocks per encoder. MJDE keeps
+its original three stages / twelve blocks. This is a block-count-controlled
+comparison, not an equal-parameter or attention-operator-only experiment.
 
-공통 tokenizer, SHPE, decoder, reconstruction loss를 고정하고 **인코더 부분**을 교체한다. 원 논문의 별도 tokenizer, pretraining objective, 분류 head, 공개 pretrained weights는 이 비교에 포함하지 않는다. LaBraM의 CLS token과 최종 normalization은 인코더 구성으로 유지한다. LaBraM은 원본 constructor에 `qkv_bias=True`, `init_values=0.1`, q/k 및 block LayerNorm epsilon `1e-6`을 지정한다. 모델 간 파라미터 수를 강제로 맞추지는 않았다. MJDE-lite는 사용자와 정한 **1-stage** 변형이다.
+| Encoder | Blocks | Encoder parameters | Dominant encoder FLOPs (19 × 30 tokens) |
+| --- | ---: | ---: | ---: |
+| MJDE | 12 | 5,787,200 | 6.700464 G |
+| LaBraM | 12 | 5,794,960 | 9.685440 G |
+| CBraMod | 12 | 4,831,200 | 5.606064 G |
+| CSBrain | 12 | 8,208,000 | 9.439200 G |
 
-**마스크 조건:** 원본 CBraMod/CSBrain은 가려진 위치를 포함한 전체 격자를 처리한다. 이 동작을 보존하기 위해 encoder 비교 5개 모두 `mask_mode: dense_zero`를 사용한다. 가려진 token+PE를 입구에서 0으로 만들고 모든 위치를 attention에 참여시킨 뒤, 출력에서 가려진 위치를 다시 0으로 만든다. 빈 위치는 내부에서 이웃 정보를 받을 수 있지만 가려진 정답 신호는 입력되지 않는다. 따라서 `encoder_mjde`는 기존 context-only MJDE 실행과 구별되는 공통 마스크 비교군이다.
+FLOPs count two operations per MAC for attention projections/products, FFNs and
+CSBrain's global projection. They exclude normalization, softmax, activations,
+dropout, pooling and elementwise operations. Masked slots remain in dense tensors;
+logical exclusion from attention does not imply sparse-compute savings.
+
+All models receive the same tokenizer output plus SHPE once. Hidden tokens and
+unavailable channels are excluded from attention keys and query outputs. Empty
+attention rows return finite zeros. CSBrain window padding is also excluded and
+region pooling averages visible tokens only. Decoder and reconstruction loss are
+unchanged. Native block equivalence is tested on fully visible, unpadded inputs.
+
+LaBraM uses its original Q/K normalization and LayerScale, but no CLS token or own
+PE/tokenizer. CSBrain uses its original window/region attention blocks without the
+external TemEmbed/BrainEmbed convolutions. Vendor files remain unchanged; adapters
+are in `encoders/context_blocks.py`. Historical `dense_zero` checkpoints are rejected.
+There is no selectable encoder masking mode in active configs.
+
+The campaign reuses the verified full MJDE KNN37 epoch-40 checkpoint for the
+8-dataset, 5-seed downstream array: its model and training settings are unchanged.
+New pretrains are MJDE-lite (one stage / four blocks), LaBraM, CBraMod and CSBrain.
+Lite is an additional capacity ablation, outside the twelve-block comparison.
+These new encoders have no automatic downstream submission in this campaign.
+The CPU controller checks hourly. Existing Optuna is independent and untouched.
+Use `scripts/mjde12_campaign.py` for this frozen campaign, not historical submissions.
+Pretrain resources: 1–4 nodes, four A100s in total, one rank per GPU, four CPUs and
+32 GiB per GPU (16 CPUs / 128 GiB total), 24 hours. Rank mapping and rendezvous use
+Slurm; GPU count and effective batch 512 remain fixed across node layouts. Downstream:
+one L40S, two CPUs, 20 GiB, four hours, concurrency four on short/long partitions.
+
+CBraMod and CSBrain additionally allow `a100_dev` and use four-hour allocations on
+dev/short/long. Each timeout continues from the last committed epoch, including
+optimizer, scheduler and all four ranks' RNG states. A CPU-only `afterany` callback
+submits continuations without waiting for the hourly monitor. A continuation must
+advance at least one completed epoch; other failures are not blindly retried.
+MJDE-lite and LaBraM retain short/long with 24-hour allocations.
 
 ### Positional embedding comparison
 
@@ -28,7 +64,7 @@
 | `pe_reve4d.yaml` | REVE 원본 `FourierEmb4D` + `mlp_pos_embedding` + LayerNorm |
 | `pe_shpe.yaml` | 현재 `src/modules/position_embedding.py`의 SHPE 그대로 |
 
-PE 비교는 현재 MJDE 3-stage와 `mask_mode: context_only`를 고정한다. 기본 `pe_scope: both`는 encoder와 decoder의 PE를 함께 바꾼다. 인코더 PE만 비교하려면 별도 overlay에서 `pe_scope: encoder`로 설정하고 **비교군 전체에 동일하게** 적용한다. 이 경우 `none`도 decoder SHPE는 남아 있다.
+PE 비교는 현재 MJDE 3-stage와 context-only masking를 고정한다. 기본 `pe_scope: both`는 encoder와 decoder의 PE를 함께 바꾼다. 인코더 PE만 비교하려면 별도 overlay에서 `pe_scope: encoder`로 설정하고 **비교군 전체에 동일하게** 적용한다. 이 경우 `none`도 decoder SHPE는 남아 있다.
 
 - `channel_id`는 별도 논문 구현으로 주장하지 않는 기본 비교군이다. SHPE의 공간 부분을 채널 이름 lookup으로 바꾸고 temporal 부분과 후처리를 유지한다. vocabulary는 최초 config 해석 때 전체 지원 데이터셋과 MNE standard_1005로 만들어 checkpoint config에 저장한다. 새 데이터셋에서도 같은 채널은 같은 ID를 사용한다. 학습에서 보지 못한 채널 ID의 embedding은 초기값에서 시작한다.
 - ACPE 전에 숨겨진 토큰을 제거한다. decoder ACPE에는 context projection만 전달하고 숨겨진 위치를 0으로 둔다. 정답 파형은 전달하지 않는다. Conv2d 원본 자체는 수정하지 않았다.
@@ -51,7 +87,7 @@ PE 비교는 현재 MJDE 3-stage와 `mask_mode: context_only`를 고정한다. �
 
 연결 코드의 역할:
 
-- [`encoders/`](encoders/): 원본 모델의 tokenizer를 token 입력 어댑터로, reconstruction projection을 Identity로 교체. 원본 encoder forward를 호출하고 `[B,C,T,D]`로 돌려준다. LaBraM 내부 PE는 공통 PE와 중복되지 않도록 제거한다.
+- [`encoders/`](encoders/): 원본 모델의 tokenizer를 token 입력 어댑터로, reconstruction projection을 Identity로 교체. 원본 encoder block 구조를 보존하고 `[B,C,T,D]`로 돌려준다. LaBraM 내부 PE는 공통 PE와 중복되지 않도록 제거한다.
 - [`positions/`](positions/): PE 크기·단위·호출 형태를 연결한다.
 - [`models.py`](models.py): 기존 tokenizer/decoder 모듈을 재사용한다. 기존 초기화가 끝난 뒤 논문 모듈을 부착하므로 원본 초기화를 기존 Kaiming 함수가 덮지 않는다.
 - [`integration.py`](integration.py): 실행 범위 안에서 기존 엔진의 모델 생성 함수 세 곳을 교체하고 종료 시 복원한다.
@@ -59,7 +95,7 @@ PE 비교는 현재 MJDE 3-stage와 `mask_mode: context_only`를 고정한다. �
 
 ### CSBrain montage 연결에서 필요한 보완
 
-원본 CSBrain 데이터셋 파일에서 region ID와 정렬 순서를 읽는다. 입력을 그 순서로 정렬하고, 출력은 기존 head가 기대하는 입력 채널 순서로 복구한다. fine-tuning 시 채널 수가 달라져도 region mask를 다시 구성하며, 해당 montage에 없는 region의 convolution은 gradient 대상에서 제외한다.
+원본 CSBrain 데이터셋 파일에서 region ID와 정렬 순서를 읽는다. 입력을 그 순서로 정렬하고, 출력은 기존 head가 기대하는 입력 채널 순서로 복구한다. fine-tuning 시 채널 수가 달라져도 region mask를 다시 구성하며, 별도 region convolution은 이번 block 비교에 포함하지 않는다.
 
 1. 원본 PhysioNet 파일은 `FT7/FT8`의 region을 2로 지정하지만 `topology[2]`에 두 채널을 빠뜨렸다. [`montage.py`](montage.py)에서 region 2의 앞에 원래 채널 목록 순서대로 추가한다. **원본 파일을 고친 것은 아니며, 이 한 건의 metadata 보완을 명시적으로 적용한다.**
 2. MentalArithmetic의 마지막 `A2-A1`은 기존 데이터셋에서 제외되는 reference 채널이다. 원본 CSBrain stress wrapper와 같이 이를 제외해 인코딩하고, 공통 출력 격자에는 0으로 돌려놓는다.
@@ -134,7 +170,7 @@ python -m ablation.pretrain --config ablation/configs/encoder_labram.yaml \
 ```bash
 python -m torch.distributed.run --standalone --nproc_per_node=1 \
   --module ablation.finetune --distributed \
-  --config configs/downstream/gr9-1_warmup5_seedv_seed42.yaml \
+  --config configs/downstream/gr9-1_seedv_seed42.yaml \
   --checkpoint outputs/ablation/encoder_labram/seed42/last.pth
 ```
 

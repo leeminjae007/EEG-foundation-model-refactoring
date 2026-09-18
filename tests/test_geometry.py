@@ -22,7 +22,7 @@ torch.set_num_threads(2)
 
 
 def config():
-    return yaml.safe_load((ROOT / 'configs/pretrain.yaml').read_text())
+    return yaml.safe_load((ROOT / 'configs/pretrain.yaml').read_text(encoding='utf-8'))
 
 
 def test_mask_matches_original_and_partitions_grid():
@@ -31,7 +31,7 @@ def test_mask_matches_original_and_partitions_grid():
     spec.loader.exec_module(original)
     model = PretrainModel(config(), torch.device('cpu'))
     coordinates = model.backbone.default_channel_coordinates
-    settings = {'policy': 'geometry_tubelet'}
+    settings = {'policy': 'geometry_tubelet', 'spatial_selection': 'geodesic_radius', 'distance_metric': 'geodesic'}
     # 세 실험 모두에서 원본 numpy sampling 순서와 torch RNG 소비를 보존한다.
     for radius, duration, ratio in [(35, 2, .5), (50, 5, .5), (50, 5, .55)]:
         settings.update(min_radius_degrees=radius, max_radius_degrees=radius + 40,
@@ -42,7 +42,8 @@ def test_mask_matches_original_and_partitions_grid():
             masks = make_masks(3, 19, 30, settings, torch.device('cpu'), coordinates)
             after = torch.get_rng_state()
             torch.manual_seed(seed)
-            expected = original.build_masking_policy(settings)(
+            oracle_settings = {key: value for key, value in settings.items() if key not in ('spatial_selection', 'distance_metric')}
+            expected = original.build_masking_policy(oracle_settings)(
                 3, 19, 30, torch.ones(3, 19, 30, dtype=torch.bool), channel_coordinates=coordinates)
             assert torch.equal(after, torch.get_rng_state())
             for key, value in masks.items():
@@ -137,16 +138,17 @@ def test_resume_rejects_different_mask_before_loading_weights(tmp_path):
                         expected_masking=config()['masking'])
 
 
-def test_reve_radius_uses_physical_units_and_285_unique_targets():
+def test_nearest_channels_uses_physical_distances_and_285_unique_targets():
     import numpy as np
     import mne
-    from scipy.spatial import KDTree
     from src.modules.geometry_masking import physical_channel_coordinates, GeometryTubeletMaskingPolicy
     from src.data.electrode_geometry import canonicalize_channel_name
     cfg = config()
     settings = cfg['masking']
-    assert settings['radius_m'] == .03
+    assert 'radius_m' not in settings
     assert settings['distance_metric'] == 'euclidean_m'
+    assert settings['spatial_selection'] == 'nearest_channels'
+    assert (settings['min_channels'], settings['max_channels']) == (3, 7)
     assert (settings['min_time_patches'], settings['max_time_patches']) == (2, 15)
     positions = physical_channel_coordinates(cfg['data']['channel_names'])
     montage = mne.channels.make_standard_montage('standard_1020').get_positions()['ch_pos']
@@ -157,12 +159,7 @@ def test_reve_radius_uses_physical_units_and_285_unique_targets():
     preserved = GeometryTubeletMaskingPolicy._coordinates(positions, 1, 19, normalize=False)[0]
     assert torch.equal(preserved, positions)
     distances = torch.cdist(positions, positions).numpy()
-    tree = KDTree(expected)
-    neighbors = []
-    for i in range(19):
-        actual = np.flatnonzero(distances[i] <= .03).tolist()
-        assert actual == sorted(tree.query_ball_point(expected[i], .03))
-        neighbors.append(len(actual))
+    assert np.allclose(np.diag(distances), 0)
     for seed in [42, 1234, 696, 1001, 3407]:
         torch.manual_seed(seed)
         masks = make_masks(4, 19, 30, settings, torch.device('cpu'), positions)
@@ -170,10 +167,5 @@ def test_reve_radius_uses_physical_units_and_285_unique_targets():
         assert (masks['context_mask'].sum((1, 2)) == 285).all()
         assert not (masks['target_mask'] & masks['context_mask']).any()
         assert masks['target_blocks'].shape == (4, 1, 19, 30)
-        radius = masks['masking_diagnostics']['geometry_mean_radius_m']
-        assert abs(float(radius) - .03) < 1e-7
-    (ROOT / 'outputs/reve_radius_verification.json').write_text(json.dumps({
-        'radius_m': .03, 'metric': 'euclidean', 'channel_names': cfg['data']['channel_names'],
-        'positions_m': positions.tolist(), 'neighbor_counts_including_self': neighbors,
-        'matches_reve_kdtree_neighbors': True, 'target_tokens': 285, 'context_tokens': 285,
-        'time_patches_inclusive': [2, 15]}, indent=2) + '\n')
+        extent = masks['masking_diagnostics']['geometry_mean_nearest_extent_m']
+        assert float(extent) >= 0

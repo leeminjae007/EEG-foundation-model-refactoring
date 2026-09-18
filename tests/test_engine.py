@@ -17,7 +17,7 @@ torch.set_num_threads(2)
 
 def test_smoke_checkpoints_load_strictly():
     report = {}
-    for name in ("pretrain", "seed-v", "stress", "seed-vig"):
+    for name in ("pretrain", "seed-v", "stress"):
         path = ROOT / "outputs/smoke" / name / "last.pth"
         checkpoint = torch.load(path, map_location="cpu")
         if name == "pretrain":
@@ -39,9 +39,9 @@ def test_smoke_checkpoints_load_strictly():
     (ROOT / "outputs/smoke-summary.json").write_text(json.dumps(report, indent=2))
 
 
-@pytest.mark.parametrize("task_name", ["seedv", "mentalarithmetic", "seedvig"])
+@pytest.mark.parametrize("task_name", ["seedv", "mentalarithmetic"])
 def test_small_validation_path(task_name):
-    path = ROOT / "configs/downstream" / ("gr9-1_warmup5_" + task_name + "_seed42.yaml")
+    path = ROOT / "configs/downstream" / ("gr9-1_" + task_name + "_seed42.yaml")
     config = yaml.safe_load(path.read_text())
     name = config["data"]["dataset"]
     spec = get_dataset_spec(name)

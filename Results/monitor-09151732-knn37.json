@@ -1,0 +1,74 @@
+{
+  "status": "monitoring",
+  "checked_utc": "2026-09-16T06:27:11.726367+00:00",
+  "missing_count": 11,
+  "missing": [
+    {
+      "dataset": "ISRUC",
+      "slug": "isruc",
+      "seed": 1234,
+      "path": "/gpfs/data/oermannlab/users/ml10266/workspace/EEG-founation-model/outputs/knn37_downstream_all13_20260915/downstream/isruc_seed1234/result.json"
+    },
+    {
+      "dataset": "ISRUC",
+      "slug": "isruc",
+      "seed": 1001,
+      "path": "/gpfs/data/oermannlab/users/ml10266/workspace/EEG-founation-model/outputs/knn37_downstream_all13_20260915/downstream/isruc_seed1001/result.json"
+    },
+    {
+      "dataset": "ISRUC",
+      "slug": "isruc",
+      "seed": 3407,
+      "path": "/gpfs/data/oermannlab/users/ml10266/workspace/EEG-founation-model/outputs/knn37_downstream_all13_20260915/downstream/isruc_seed3407/result.json"
+    },
+    {
+      "dataset": "HMC",
+      "slug": "hmc",
+      "seed": 42,
+      "path": "/gpfs/data/oermannlab/users/ml10266/workspace/EEG-founation-model/outputs/knn37_downstream_all13_20260915/downstream/hmc_seed42/result.json"
+    },
+    {
+      "dataset": "HMC",
+      "slug": "hmc",
+      "seed": 1001,
+      "path": "/gpfs/data/oermannlab/users/ml10266/workspace/EEG-founation-model/outputs/knn37_downstream_all13_20260915/downstream/hmc_seed1001/result.json"
+    },
+    {
+      "dataset": "HMC",
+      "slug": "hmc",
+      "seed": 3407,
+      "path": "/gpfs/data/oermannlab/users/ml10266/workspace/EEG-founation-model/outputs/knn37_downstream_all13_20260915/downstream/hmc_seed3407/result.json"
+    },
+    {
+      "dataset": "Siena",
+      "slug": "siena",
+      "seed": 42,
+      "path": "/gpfs/data/oermannlab/users/ml10266/workspace/EEG-founation-model/outputs/knn37_downstream_all13_20260915/downstream/siena_seed42/result.json"
+    },
+    {
+      "dataset": "Siena",
+      "slug": "siena",
+      "seed": 1234,
+      "path": "/gpfs/data/oermannlab/users/ml10266/workspace/EEG-founation-model/outputs/knn37_downstream_all13_20260915/downstream/siena_seed1234/result.json"
+    },
+    {
+      "dataset": "Siena",
+      "slug": "siena",
+      "seed": 696,
+      "path": "/gpfs/data/oermannlab/users/ml10266/workspace/EEG-founation-model/outputs/knn37_downstream_all13_20260915/downstream/siena_seed696/result.json"
+    },
+    {
+      "dataset": "Siena",
+      "slug": "siena",
+      "seed": 1001,
+      "path": "/gpfs/data/oermannlab/users/ml10266/workspace/EEG-founation-model/outputs/knn37_downstream_all13_20260915/downstream/siena_seed1001/result.json"
+    },
+    {
+      "dataset": "Siena",
+      "slug": "siena",
+      "seed": 3407,
+      "path": "/gpfs/data/oermannlab/users/ml10266/workspace/EEG-founation-model/outputs/knn37_downstream_all13_20260915/downstream/siena_seed3407/result.json"
+    }
+  ],
+  "slurm": "27488465|COMPLETED|0:0\n27488466|COMPLETED|0:0\n27488467|TIMEOUT|0:0\n27488468|TIMEOUT|0:0\n27488469|TIMEOUT|0:0\n27488509|COMPLETED|0:0\n27492823|COMPLETED|0:0\n27492824|COMPLETED|0:0\n27493704|COMPLETED|0:0\n27493705|COMPLETED|0:0\n27493808|COMPLETED|0:0\n27493809|COMPLETED|0:0\n27493810|COMPLETED|0:0\n27493814|COMPLETED|0:0\n27493892|COMPLETED|0:0\n27493933|COMPLETED|0:0\n27494147|COMPLETED|0:0\n27494148|COMPLETED|0:0\n27495075|COMPLETED|0:0\n27495423|COMPLETED|0:0\n27495505|COMPLETED|0:0\n27496631|COMPLETED|0:0\n27496791|COMPLETED|0:0\n27496924|COMPLETED|0:0\n27496958|COMPLETED|0:0\n27497016|COMPLETED|0:0\n27497017|COMPLETED|0:0\n27497018|COMPLETED|0:0\n27497073|COMPLETED|0:0\n27497113|COMPLETED|0:0\n27497195|COMPLETED|0:0\n27497211|COMPLETED|0:0\n27497256|COMPLETED|0:0\n27497272|COMPLETED|0:0\n27497323|COMPLETED|0:0\n27497350|COMPLETED|0:0\n27497392|COMPLETED|0:0\n27497409|COMPLETED|0:0\n27497410|COMPLETED|0:0\n27497411|COMPLETED|0:0\n27497412|COMPLETED|0:0\n27497428|COMPLETED|0:0\n27497440|COMPLETED|0:0\n27497479|COMPLETED|0:0\n27497489|COMPLETED|0:0\n27497493|COMPLETED|0:0\n27497494|COMPLETED|0:0\n27497503|COMPLETED|0:0\n27497518|COMPLETED|0:0\n27497577|COMPLETED|0:0\n27497597|COMPLETED|0:0\n27497652|TIMEOUT|0:0\n27497659|COMPLETED|0:0\n27497711|TIMEOUT|0:0\n27497712|TIMEOUT|0:0\n27498190|RUNNING|0:0\n27498264|COMPLETED|0:0\n27498280|COMPLETED|0:0\n27499014|RUNNING|0:0\n27499482|RUNNING|0:0\n27499520|RUNNING|0:0\n27499521|RUNNING|0:0\n27499522|RUNNING|0:0\n27488460|PENDING|0:0\n27498629|COMPLETED|0:0\n27498668|COMPLETED|0:0\n27497502|COMPLETED|0:0\n"
+}

@@ -1,4 +1,4 @@
-"""GR6 geometry tubelet 알고리즘. 원본의 sampling·합집합·마지막 영역 절단을 보존한다."""
+"""Geometry tubelets using nearest-electrode groups and contiguous time spans."""
 
 import math
 import mne
@@ -20,14 +20,7 @@ def physical_channel_coordinates(channel_names):
 
 
 class GeometryTubeletMaskingPolicy:
-    """Mask unions of local electrode circles and contiguous time intervals.
-
-    A proposal selects a random electrode as its spatial center and combines
-    its neighborhood with a contiguous patch interval. Historical geometry uses
-    geodesic angles; the REVE radius option uses physical Euclidean metres. Proposals are added
-    until the exact requested target count is reached. If the final proposal
-    crosses the count boundary, its most central space-time tokens are retained.
-    """
+    """Mask unions of nearest-electrode groups and contiguous time intervals."""
 
     def __init__(
         self,
@@ -37,21 +30,31 @@ class GeometryTubeletMaskingPolicy:
         min_time_patches=2,
         max_time_patches=15,
         distance_metric="geodesic",
-        radius_m=None,
+        spatial_selection="nearest_channels",
+        min_channels=3,
+        max_channels=7,
     ):
         self.mask_ratio = float(mask_ratio)
         self.distance_metric = distance_metric
-        if distance_metric == "euclidean_m":
-            if radius_m is None or not math.isfinite(radius_m) or radius_m <= 0:
-                raise ValueError("euclidean masking requires a positive radius_m")
-            self.min_radius = self.max_radius = float(radius_m)
-        elif distance_metric == "geodesic":
+        self.spatial_selection = spatial_selection
+        self.min_channels = min_channels
+        self.max_channels = max_channels
+        if spatial_selection == "nearest_channels":
+            if distance_metric != "euclidean_m":
+                raise ValueError("nearest_channels requires physical euclidean_m coordinates")
+            if any(value is not None for value in (min_radius_degrees, max_radius_degrees)):
+                raise ValueError("nearest_channels uses channel counts, not radius bounds")
+            if (type(min_channels) is not int or type(max_channels) is not int
+                    or not 1 <= min_channels <= max_channels):
+                raise ValueError("nearest channel counts must satisfy 1 <= min <= max")
+            self.min_radius = self.max_radius = None
+        elif spatial_selection == "geodesic_radius" and distance_metric == "geodesic":
             self.min_radius = float(min_radius_degrees)
             self.max_radius = float(max_radius_degrees)
             if not 0.0 < self.min_radius <= self.max_radius < 180.0:
                 raise ValueError("geometry radii must satisfy 0 < min <= max < 180")
         else:
-            raise ValueError("unsupported geometry distance_metric: " + str(distance_metric))
+            raise ValueError("unsupported geometry spatial selection: " + str(spatial_selection))
         self.min_time_patches = int(min_time_patches)
         self.max_time_patches = int(max_time_patches)
         if not 0.0 < self.mask_ratio < 1.0:
@@ -83,6 +86,11 @@ class GeometryTubeletMaskingPolicy:
 
     def _sample_one(self, spatial_distances, patches, target_count, rng):
         channels = spatial_distances.shape[0]
+        if self.spatial_selection == "nearest_channels" and self.max_channels > channels:
+            raise ValueError("maximum nearest channel count exceeds the channel grid")
+        nearest = None
+        if self.spatial_selection == "nearest_channels":
+            nearest = np.argsort(spatial_distances, axis=-1, kind="stable")
         target = np.zeros((channels, patches), dtype=np.bool_)
         tubelet_count = 0
         radius_sum = 0.0
@@ -95,10 +103,16 @@ class GeometryTubeletMaskingPolicy:
             if remaining == 0:
                 break
             center = int(rng.integers(0, channels))
-            radius_value = float(rng.uniform(
-                self.min_radius, self.max_radius
-            ))
-            radius = math.radians(radius_value) if self.distance_metric == "geodesic" else radius_value
+            if nearest is not None:
+                count = int(rng.integers(self.min_channels, self.max_channels + 1))
+                row = nearest[center]
+                row = np.concatenate(([center], row[row != center]))
+                selected_indices = row[:count]
+                radius = float(spatial_distances[center, selected_indices[-1]])
+                radius_value = radius
+            else:
+                radius_value = float(rng.uniform(self.min_radius, self.max_radius))
+                radius = math.radians(radius_value)
             duration = int(rng.integers(
                 self.min_time_patches,
                 min(self.max_time_patches, patches) + 1,
@@ -107,8 +121,12 @@ class GeometryTubeletMaskingPolicy:
             stop = start + duration
 
             spatial_distance = spatial_distances[center]
-            selected_channels = spatial_distance <= radius
-            selected_channels[center] = True
+            selected_channels = np.zeros(channels, dtype=np.bool_)
+            if nearest is not None:
+                selected_channels[selected_indices] = True
+            else:
+                selected_channels[:] = spatial_distance <= radius
+                selected_channels[center] = True
             proposal = np.zeros_like(target)
             proposal[:, start:stop] = selected_channels[:, None]
             proposal &= ~target
@@ -159,12 +177,14 @@ class GeometryTubeletMaskingPolicy:
             raise ValueError("geometry masking requires the fixed valid pretraining grid")
         if self.min_time_patches > patches:
             raise ValueError("minimum tubelet time span exceeds the patch grid")
+        if self.spatial_selection == "nearest_channels" and self.max_channels > channels:
+            raise ValueError("maximum nearest channel count exceeds the channel grid")
         coordinates = GeometryTubeletMaskingPolicy._coordinates(
             channel_coordinates, batch, channels, normalize=self.distance_metric == "geodesic"
         )
         coordinate_array = coordinates.numpy()
         if self.distance_metric == "euclidean_m":
-            # REVE의 KDTree.query_ball_point(..., 0.03)와 같은 3D 유클리드 이웃.
+            # Physical distances rank electrodes; no fixed metric radius is used.
             delta = coordinate_array[:, :, None, :] - coordinate_array[:, None, :, :]
             spatial_distances = np.linalg.norm(delta, axis=-1)
         else:
@@ -202,7 +222,7 @@ class GeometryTubeletMaskingPolicy:
         context_mask = valid_token_mask & ~target_mask
         diagnostics = {
             "geometry_tubelet_count": torch.tensor(tubelet_counts).float().mean(),
-            ("geometry_mean_radius_m" if self.distance_metric == "euclidean_m"
+            ("geometry_mean_nearest_extent_m" if self.spatial_selection == "nearest_channels"
              else "geometry_mean_radius_degrees"): torch.tensor(mean_radii).mean(),
             "geometry_mean_time_span_patches": torch.tensor(mean_durations).mean(),
             "geometry_clipped_tubelet_count": (

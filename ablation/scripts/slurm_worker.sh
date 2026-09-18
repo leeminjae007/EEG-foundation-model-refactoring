@@ -14,6 +14,7 @@ case "${CUDA_VISIBLE_DEVICES:-}" in
 esac
 export RANK="$SLURM_PROCID"
 export WORLD_SIZE="$SLURM_NTASKS"
+export ABLATION_AUTO_RESUME="${ABLATION_AUTO_RESUME:-1}"
 # Slurm exposes exactly one GPU to each task, which PyTorch sees as cuda:0.
 # SLURM_LOCALID is NOT a CUDA index under this per-task binding.
 export LOCAL_RANK=0

@@ -7,9 +7,9 @@ gpus="${2:-1}"
 data_dir="${3:-}"
 seed="${4:-42}"
 case "$group" in
-  encoder) arms=(encoder_labram encoder_cbramod encoder_csbrain encoder_mjde encoder_mjde_lite) ;;
+  encoder) arms=(encoder_labram encoder_cbramod encoder_csbrain encoder_mjde encoder_mjde_lite encoder_mjde_s2t6 encoder_mjde_t2s6 encoder_mjde_average) ;;
   pe) arms=(pe_none pe_channel_id pe_acpe pe_reve4d pe_shpe) ;;
-  all) arms=(encoder_labram encoder_cbramod encoder_csbrain encoder_mjde encoder_mjde_lite pe_none pe_channel_id pe_acpe pe_reve4d pe_shpe) ;;
+  all) arms=(encoder_labram encoder_cbramod encoder_csbrain encoder_mjde encoder_mjde_lite encoder_mjde_s2t6 encoder_mjde_t2s6 encoder_mjde_average pe_none pe_channel_id pe_acpe pe_reve4d pe_shpe) ;;
   *) echo "Usage: $0 {encoder|pe|all} GPU_COUNT [TUEG_LMDB] [SEED]" >&2; exit 2 ;;
 esac
 cd "$(dirname "${BASH_SOURCE[0]}")/../.."

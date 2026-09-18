@@ -3,7 +3,6 @@ ablation:
   name: pe_reve4d
   encoder: mjde
   position: reve4d
-  mask_mode: context_only
   pe_scope: both
   reve_freqs: 4
   reve_noise_ratio: 0.0

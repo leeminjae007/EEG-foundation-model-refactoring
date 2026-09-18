@@ -1,0 +1,17 @@
+{
+  "model_order": ["CBraMod", "CSBrain", "REVE"],
+  "datasets": {
+    "tuab": {"balanced_accuracy": {"CBraMod": [0.8289, 0.0022], "CSBrain": [0.8172, 0.0043], "REVE": [0.8315, 0.0014]}, "auroc": {"CBraMod": [0.9227, 0.0011], "CSBrain": [0.8957, 0.0046], "REVE": [0.9245, 0.0013]}, "auprc": {"CBraMod": [0.9258, 0.0008], "CSBrain": [0.9005, 0.0066], "REVE": [0.9281, 0.0009]}},
+    "tuev": {"balanced_accuracy": {"CBraMod": [0.6671, 0.0107], "CSBrain": [0.6903, 0.0059], "REVE": [0.6759, 0.0229]}, "weighted_f1": {"CBraMod": [0.8342, 0.0064], "CSBrain": [0.8333, 0.0057], "REVE": [0.8451, 0.0129]}, "kappa": {"CBraMod": [0.6772, 0.0096], "CSBrain": [0.6833, 0.0047], "REVE": [0.6783, 0.0199]}},
+    "chb": {"balanced_accuracy": {"CBraMod": [0.7398, 0.0284], "CSBrain": [0.7262, 0.0115]}, "auroc": {"CBraMod": [0.8892, 0.0154], "CSBrain": [0.8915, 0.0321]}, "auprc": {"CBraMod": [0.3689, 0.0382], "CSBrain": [0.5164, 0.0449]}},
+    "seedv": {"balanced_accuracy": {"CBraMod": [0.4091, 0.0097], "CSBrain": [0.4197, 0.0033]}, "weighted_f1": {"CBraMod": [0.4101, 0.0108], "CSBrain": [0.4280, 0.0023]}, "kappa": {"CBraMod": [0.2569, 0.0143], "CSBrain": [0.2785, 0.0034]}},
+    "faced": {"balanced_accuracy": {"CBraMod": [0.5509, 0.0089], "CSBrain": [0.5752, 0.0042], "REVE": [0.5646, 0.0164]}, "weighted_f1": {"CBraMod": [0.5618, 0.0093], "CSBrain": [0.5796, 0.0031], "REVE": [0.5659, 0.0172]}, "kappa": {"CBraMod": [0.5041, 0.0122], "CSBrain": [0.5204, 0.0036], "REVE": [0.5080, 0.0191]}},
+    "mentalarithmetic": {"balanced_accuracy": {"CBraMod": [0.7256, 0.0132], "CSBrain": [0.7558, 0.0106], "REVE": [0.7660, 0.0355]}, "auroc": {"CBraMod": [0.7905, 0.0073], "CSBrain": [0.8478, 0.0297], "REVE": [0.8450, 0.0514]}, "auprc": {"CBraMod": [0.6267, 0.0099], "CSBrain": [0.6696, 0.0221], "REVE": [0.7470, 0.0807]}},
+    "bciciv2a": {"balanced_accuracy": {"CBraMod": [0.5138, 0.0066], "CSBrain": [0.5657, 0.0071], "REVE": [0.6396, 0.0095]}, "weighted_f1": {"CBraMod": [0.4984, 0.0085], "CSBrain": [0.5637, 0.0087], "REVE": [0.6339, 0.0110]}, "kappa": {"CBraMod": [0.3518, 0.0094], "CSBrain": [0.4209, 0.0093], "REVE": [0.5194, 0.0126]}},
+    "physionet_mi": {"balanced_accuracy": {"CBraMod": [0.6417, 0.0091], "CSBrain": [0.6304, 0.0090], "REVE": [0.6480, 0.0140]}, "weighted_f1": {"CBraMod": [0.6427, 0.0100], "CSBrain": [0.6308, 0.0095], "REVE": [0.6484, 0.0170]}, "kappa": {"CBraMod": [0.5222, 0.0169], "CSBrain": [0.5071, 0.0120], "REVE": [0.5306, 0.0187]}},
+    "isruc": {"balanced_accuracy": {"CBraMod": [0.7865, 0.0110], "CSBrain": [0.7925, 0.0030], "REVE": [0.7819, 0.0078]}, "weighted_f1": {"CBraMod": [0.8011, 0.0099], "CSBrain": [0.7990, 0.0091], "REVE": [0.8005, 0.0135]}, "kappa": {"CBraMod": [0.7442, 0.0152], "CSBrain": [0.7406, 0.0102], "REVE": [0.7500, 0.0156]}},
+    "hmc": {"balanced_accuracy": {"REVE": [0.7401, null]}},
+    "siena": {"balanced_accuracy": {"CSBrain": [0.7662, null]}}
+  },
+  "source": "/gpfs/data/oermannlab/users/ml10266/workspace/eeg-foundation-model/outputs/best_model_checkpoint_comparison_20260905/published_references.json; HMC and Siena BAcc from docs/TEN_TASK_BACC_STRATEGY_20260915.md"
+}

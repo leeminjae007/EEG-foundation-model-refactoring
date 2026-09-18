@@ -5,7 +5,7 @@ from functools import lru_cache
 
 from ablation.sources import VENDOR
 
-DATASETS = {"seed-v": "seedv", "seed-vig": "seedvig"}
+DATASETS = {"seed-v": "seedv"}
 
 
 def canonical(name):

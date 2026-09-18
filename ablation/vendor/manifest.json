@@ -101,29 +101,14 @@
                           "sha256":  "8508b3cf538543af2659c4435eae9f6de2a9c743319cedb0e16b5e783b24f95d"
                       },
                       {
-                          "path":  "models/model_for_mumtaz.py",
-                          "url":  "https://raw.githubusercontent.com/yuchen2199/CSBrain/185aee55b24d0410a830df8dd08d03f675616998/models/model_for_mumtaz.py",
-                          "sha256":  "29ab7da4d9874bf05e33e7a419b28c04bd007cd324e807000170865afafc30c5"
-                      },
-                      {
                           "path":  "models/model_for_physio.py",
                           "url":  "https://raw.githubusercontent.com/yuchen2199/CSBrain/185aee55b24d0410a830df8dd08d03f675616998/models/model_for_physio.py",
                           "sha256":  "6b1a062835fb9587879d77c275104304edffc20b9452ed79738ee6ea12685b48"
                       },
                       {
-                          "path":  "models/model_for_seedvig.py",
-                          "url":  "https://raw.githubusercontent.com/yuchen2199/CSBrain/185aee55b24d0410a830df8dd08d03f675616998/models/model_for_seedvig.py",
-                          "sha256":  "da561d436b5a3da47976dd452b4d59ff362a8727f255907ff4a258c88de99785"
-                      },
-                      {
                           "path":  "models/model_for_siena.py",
                           "url":  "https://raw.githubusercontent.com/yuchen2199/CSBrain/185aee55b24d0410a830df8dd08d03f675616998/models/model_for_siena.py",
                           "sha256":  "a7024fb1d404fb50be621ae744e4b59d99945dc90f0e811e2f40b057e98b2c40"
-                      },
-                      {
-                          "path":  "models/model_for_speech.py",
-                          "url":  "https://raw.githubusercontent.com/yuchen2199/CSBrain/185aee55b24d0410a830df8dd08d03f675616998/models/model_for_speech.py",
-                          "sha256":  "9fd6e6c3b13cbe970047322ce29dfa78d1854893abcb0e5067f35adfd061c17f"
                       },
                       {
                           "path":  "models/model_for_stress.py",

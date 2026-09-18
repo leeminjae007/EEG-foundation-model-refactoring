@@ -9,9 +9,9 @@ import yaml
 
 ROOT = Path(__file__).resolve().parents[1]
 ROSTER = [('tuab', 'TUAB'), ('tuev', 'TUEV'), ('chb', 'CHB-MIT'),
-          ('seed-v', 'SEED-V'), ('seed-vig', 'SEED-VIG'), ('faced', 'FACED'),
-          ('mumtaz', 'Mumtaz'), ('stress', 'MentalArithmetic'), ('bciciv2a', 'BCIC-IV-2a'),
-          ('physio', 'PhysioNet-MI'), ('speech', 'BCIC2020-3'), ('isruc', 'ISRUC'),
+          ('seed-v', 'SEED-V'), ('faced', 'FACED'),
+          ('stress', 'MentalArithmetic'), ('bciciv2a', 'BCIC-IV-2a'),
+          ('physio', 'PhysioNet-MI'), ('isruc', 'ISRUC'),
           ('hmc', 'HMC'), ('siena', 'Siena')]
 SEEDS = [42, 1234, 696, 1001, 3407]
 
@@ -34,7 +34,7 @@ def audit(original):
         assert len(entries) == 70
         rows, settings[label] = [], {}
         for dataset, display in ROSTER:
-            metric = 'r2' if dataset == 'seed-vig' else 'balanced_accuracy'
+            metric = 'balanced_accuracy'
             values, sources = [], []
             for seed in SEEDS:
                 entry = entries[dataset, seed]
@@ -58,21 +58,20 @@ def audit(original):
     matched = [ds for ds, _ in ROSTER if all(
         settings['GR2-3'][ds, seed] == settings['GR6-1'][ds, seed] == settings['GR6-2'][ds, seed]
         for seed in SEEDS)]
-    assert len(matched) == 9
+    if not matched:
+        raise ValueError('No retained datasets have matching downstream settings')
     assert settings['GR6-1'] == settings['GR6-2']
     for report in reports.values():
         rows = report['tasks']
-        report['matched_8_classification_validation_bacc'] = statistics.mean(
+        report['matched_classification_validation_bacc'] = statistics.mean(
             row['mean'] for row in rows if row['slug'] in matched and row['metric'] == 'balanced_accuracy')
-        report['all_13_classification_validation_bacc'] = statistics.mean(
+        report['all_classification_validation_bacc'] = statistics.mean(
             row['mean'] for row in rows if row['metric'] == 'balanced_accuracy')
-        report['seed_vig_validation_r2'] = next(row['mean'] for row in rows if row['metric'] == 'r2')
-    selected = max(reports, key=lambda label: reports[label]['matched_8_classification_validation_bacc'])
+    selected = max(reports, key=lambda label: reports[label]['matched_classification_validation_bacc'])
     report = {'selected': selected, 'seeds': SEEDS, 'matched_tasks': matched,
-              'criterion': 'Equal-task mean validation BAcc over 8 classification tasks with identical downstream settings across all three variants; SEED-VIG R2 reported separately.',
+              'criterion': 'Equal-task mean validation BAcc over retained classification tasks with identical downstream settings across all three variants.',
               'limitations': ['Exploratory selection from completed runs, not a preregistered estimate.',
                              'GR2-3 binary runs used CE; GR6 adopted binary runs used weighted CE. Those five tasks are excluded from the three-way score.',
-                             'SEED-VIG validation R2 is higher for GR2-3.',
                              'These masking variants were trained on GR2 architecture. Transfer to GR9-1 PE has not been trained or evaluated.'],
               'test_metrics_used_for_selection': False, 'variants': reports}
     path = ROOT / 'docs/geometry_selection.json'

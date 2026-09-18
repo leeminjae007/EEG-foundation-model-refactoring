@@ -5,6 +5,7 @@ from torch import nn
 
 from src.modules.attention import SpatialAttention, TemporalAttention
 from src.modules.normalization import RMSNorm
+from src.modules.fusion import PatchFusionGate, fusion_gate_mode
 
 
 class EncoderBlock(nn.Module):
@@ -41,6 +42,7 @@ class EncoderBlock(nn.Module):
 class Encoder(nn.Module):
     def __init__(self, config):
         super().__init__()
+        self.fusion_gate_mode = fusion_gate_mode(config)
         # 생성 순서도 원본과 같다. 경로/단계 사이에 block 가중치를 공유하지 않는다.
         self.s2t_spatial = nn.ModuleList()
         self.s2t_temporal = nn.ModuleList()
@@ -54,7 +56,11 @@ class Encoder(nn.Module):
             self.t2s_temporal.append(EncoderBlock(config, "temporal"))
         for _ in range(3):
             self.t2s_spatial.append(EncoderBlock(config, "spatial"))
-        self.fusion_gates = nn.Parameter(torch.zeros(3, config["embed_dim"]))
+        if self.fusion_gate_mode == "static_feature":
+            self.fusion_gates = nn.Parameter(torch.zeros(3, config["embed_dim"]))
+        else:
+            width = 1 if self.fusion_gate_mode == "patch_scalar" else config["embed_dim"]
+            self.patch_gates = nn.ModuleList([PatchFusionGate(config["embed_dim"], width) for _ in range(3)])
         self.output_norm = RMSNorm(config["embed_dim"], config["norm_epsilon"])
 
     def forward(self, tokens, visible):
@@ -67,6 +73,9 @@ class Encoder(nn.Module):
             temporal_first = self.t2s_temporal[stage](fused, visible)
             t2s = self.t2s_spatial[stage](temporal_first, visible)
 
-            gate = self.fusion_gates[stage].sigmoid().view(1, 1, 1, -1)
+            if self.fusion_gate_mode == "static_feature":
+                gate = self.fusion_gates[stage].sigmoid().view(1, 1, 1, -1)
+            else:
+                gate = self.patch_gates[stage](s2t, t2s, visible)
             fused = (gate * s2t + (1.0 - gate) * t2s) * mask
         return self.output_norm(fused) * mask

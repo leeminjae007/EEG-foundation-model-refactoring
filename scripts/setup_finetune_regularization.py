@@ -1,4 +1,4 @@
-"""GR9-1 warmup5의 train/validation을 감사하고 단일 요인 fine-tune 후보를 만든다."""
+"""GR9-1의 train/validation을 감사하고 단일 요인 fine-tune 후보를 만든다."""
 import argparse
 from copy import deepcopy
 import hashlib
@@ -10,8 +10,7 @@ import yaml
 
 ROOT = Path(__file__).resolve().parents[1]
 SEEDS = [42, 1234, 696, 1001, 3407]
-TASKS = [('mumtaz', 'mumtaz', 'Mumtaz', 19, 5, 1),
-         ('mentalarithmetic', 'stress', 'MentalArithmetic', 20, 5, 1),
+TASKS = [('mentalarithmetic', 'stress', 'MentalArithmetic', 20, 5, 1),
          ('bciciv2a', 'bciciv2a', 'BCIC-IV-2a', 22, 4, 4)]
 ARMS = ['backbone_lr_x0p1', 'head_dropout_plus0p2', 'head_h2']
 
@@ -64,9 +63,9 @@ def prepare(original):
                          'last': last, 'history': history,
                          'result_path': str(result_path), 'result_sha256': digest(result_path),
                          'log_path': str(logs[0]), 'log_sha256': digest(logs[0])})
-            base_path = ROOT / f'configs/downstream/gr9-1_warmup5_{slug}_seed{seed}.yaml'
+            base_path = ROOT / f'configs/downstream/gr9-1_{slug}_seed{seed}.yaml'
             baseline = yaml.safe_load(base_path.read_text())
-            assert baseline['optimization']['warmup_epochs'] == 5
+            assert 'warmup_epochs' not in baseline['optimization']
             for arm in ARMS:
                 config = deepcopy(baseline)
                 opt = config['optimization']
@@ -105,13 +104,13 @@ def prepare(original):
                       'best_epochs': [r['best_epoch'] for r in runs],
                       'head_parameters_default': head_parameters(channels, patches, patches, outputs),
                       'head_parameters_h2': head_parameters(channels, patches, 2, outputs)})
-    report = {'baseline': 'Completed original GR9-1 epoch40, warmup5 downstream, full 50 epochs, validation-BAcc selection',
+    report = {'baseline': 'Completed original GR9-1 epoch40 downstream, full 50 epochs, validation-BAcc selection',
               'test_metrics_used': False, 'seeds': SEEDS, 'tasks': audit}
     (campaign / 'audit.json').write_text(json.dumps(report, indent=2) + '\n')
     manifest = {'status': 'prepared_not_submitted', 'entries': entries,
                 'priority': 'backbone_lr_x0p1', 'independent_arms': ARMS,
                 'selection': 'Compare complete five-seed validation BAcc means separately for each task; no test-based adoption.',
-                'preserved': 'GR9-1 checkpoint, 50 epochs, warmup5, head LR, batch size, weight decay, loss, splits, all-patch pooling, dual selectors',
+                'preserved': 'GR9-1 checkpoint, 50 epochs, head LR, batch size, weight decay, loss, splits, all-patch pooling, dual selectors',
                 'notes': ['Do not combine factors before their independent comparisons.',
                           'Existing original-project baselines can be reused as historical controls; new-engine comparisons remain exploratory until runtime comparability is checked.',
                           'The pending geometry pretrain is a different experiment and is not the source checkpoint for these configs.',

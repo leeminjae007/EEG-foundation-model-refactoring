@@ -853,7 +853,6 @@ def run_downstream(config):
         optimizer,
         total_steps=total_steps,
         min_learning_rate=optimization['min_learning_rate'],
-        warmup_steps=int(round(optimization.get('warmup_epochs', 0) * updates_per_epoch)),
     )
     primary_selection_metric = optimization['selection_metric']
     selection_metrics = [primary_selection_metric]

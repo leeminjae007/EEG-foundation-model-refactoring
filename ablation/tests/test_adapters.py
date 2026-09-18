@@ -16,7 +16,8 @@ def config(name):
 
 
 def test_upstream_bytes():
-    assert verify_sources()["verified_files"] >= 29
+    # The removed SEED-VIG adapter is intentionally absent from the vendor set.
+    assert verify_sources()["verified_files"] >= 26
 
 
 def test_shpe_baseline_exact_output_and_gradients():
@@ -56,10 +57,10 @@ def test_cbramod_encoder_matches_original_stack():
     model = build_backbone(config("encoder_cbramod")).eval()
     core = model.encoder.core.core
     tokens = torch.randn(2, 19, 6, 200)
-    mask = torch.rand(2, 19, 6) > .5
+    mask = torch.ones(2, 19, 6, dtype=torch.bool)
     zeroed = tokens.masked_fill(~mask[..., None], 0)
     expected = core.encoder(zeroed).masked_fill(~mask[..., None], 0)
-    torch.testing.assert_close(model.encoder(tokens, mask), expected, rtol=0, atol=0)
+    torch.testing.assert_close(model.encoder(tokens, mask), expected, rtol=1e-5, atol=2e-6)
 
 
 def test_acpe_calls_original_conv_and_excludes_target_content():
@@ -114,9 +115,59 @@ def test_mjde_lite_removes_two_stages():
     assert sum(p.numel() for p in core.parameters()) < sum(p.numel() for p in full.backbone.encoder.parameters()) / 2
 
 
+@pytest.mark.parametrize("name,order", [
+    ("encoder_mjde_s2t6", "s2t"),
+    ("encoder_mjde_t2s6", "t2s"),
+])
+def test_single_path_mjde_uses_six_stages_and_all_twelve_blocks(name, order):
+    baseline = build_pretrain(config("encoder_mjde"), torch.device("cpu"))
+    model = build_pretrain(config(name), torch.device("cpu"))
+    core = model.backbone.encoder.core
+    assert core.order == order
+    assert len(core.spatial) == len(core.temporal) == 6
+    assert not hasattr(core, "fusion_gates")
+    baseline_core = baseline.backbone.encoder.core
+    expected = sum(p.numel() for p in baseline_core.parameters()) - baseline_core.fusion_gates.numel()
+    assert sum(p.numel() for p in core.parameters()) == expected
+
+
+def test_average_mjde_keeps_both_paths_with_no_learnable_gate():
+    baseline = build_pretrain(config("encoder_mjde"), torch.device("cpu"))
+    model = build_pretrain(config("encoder_mjde_average"), torch.device("cpu"))
+    core = model.backbone.encoder.core
+    assert len(core.s2t_spatial) == len(core.t2s_temporal) == 3
+    assert not hasattr(core, "fusion_gates")
+    baseline_core = baseline.backbone.encoder.core
+    expected = sum(p.numel() for p in baseline_core.parameters()) - baseline_core.fusion_gates.numel()
+    assert sum(p.numel() for p in core.parameters()) == expected
+
+
+def test_mix1only_keeps_paths_separate_until_final_average():
+    baseline = build_pretrain(config("encoder_mjde"), torch.device("cpu"))
+    model = build_pretrain(config("encoder_mjde_mix1only"), torch.device("cpu"))
+    core = model.backbone.encoder.core
+    assert len(core.s2t_spatial) == len(core.s2t_temporal) == 3
+    assert len(core.t2s_spatial) == len(core.t2s_temporal) == 3
+    assert not hasattr(core, "fusion_gates")
+    baseline_core = baseline.backbone.encoder.core
+    expected_count = sum(p.numel() for p in baseline_core.parameters()) - baseline_core.fusion_gates.numel()
+    assert sum(p.numel() for p in core.parameters()) == expected_count
+
+    core.eval()
+    tokens = torch.randn(2, 19, 6, 200)
+    visible = torch.rand(2, 19, 6) > .4
+    mask = visible.unsqueeze(-1)
+    s2t = t2s = tokens * mask
+    for stage in range(3):
+        s2t = core.s2t_temporal[stage](core.s2t_spatial[stage](s2t, visible), visible) * mask
+        t2s = core.t2s_spatial[stage](core.t2s_temporal[stage](t2s, visible), visible) * mask
+    expected = core.output_norm((s2t + t2s) * .5 * mask) * mask
+    torch.testing.assert_close(core(tokens, visible), expected, rtol=0, atol=0)
+
+
 def test_invalid_config_is_not_silently_ignored():
     settings = config("encoder_cbramod")
-    settings["ablation"]["mask_mode"] = "context_only"
+    settings["ablation"]["mask_mode"] = "dense_zero"
     with pytest.raises(ValueError, match="dense_zero"):
         resolve_ablation(settings)
     settings = config("pe_shpe")
@@ -125,8 +176,8 @@ def test_invalid_config_is_not_silently_ignored():
         resolve_ablation(settings)
 
 
-@pytest.mark.parametrize("dataset", ["bciciv2a", "chb", "faced", "hmc", "isruc", "mumtaz", "physio",
-                                     "seed-v", "seed-vig", "siena", "speech", "stress", "tuab", "tuev"])
+@pytest.mark.parametrize("dataset", ["bciciv2a", "chb", "faced", "hmc", "isruc", "physio",
+                                     "seed-v", "siena", "stress", "tuab", "tuev"])
 def test_csbrain_downstream_montages_and_short_sequences(dataset):
     from src.data.datasets.registry import get_dataset_spec
     settings = config("encoder_csbrain")

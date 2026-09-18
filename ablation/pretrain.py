@@ -53,16 +53,22 @@ def main():
             parser.error("Real-data --smoke uses geometry_tubelet; use ablation.smoke for synthetic checks")
     if args.device == "cpu" or args.dry_run:
         torch.set_num_threads(2)
+    if (not args.resume and not args.smoke and not args.dry_run
+            and os.environ.get("ABLATION_AUTO_RESUME") == "1" and (output / "last.pth").is_file()):
+        args.resume = str(output / "last.pth")
     if args.resume:
+        from ablation.pretrain_resume import validate_resume, trim_partial_metrics
         args.resume = str((ROOT / args.resume).resolve())
         saved = torch.load(args.resume, map_location="cpu", weights_only=False)
-        if saved["extra"].get("partial_epoch_smoke"):
-            raise ValueError("Cannot resume training from a one-update smoke checkpoint")
-        if saved["config"]["ablation"] != config["ablation"]:
-            raise ValueError("Resume ablation config differs from checkpoint")
-        for key in ("encoder", "position", "patch_encoder", "mae", "data", "optimization", "seed"):
-            if saved["config"][key] != config[key]:
-                raise ValueError("Resume config differs from checkpoint: " + key)
+        validate_resume(saved, config, int(os.environ.get("WORLD_SIZE", "1")) if args.distributed else 1)
+        if int(os.environ.get("RANK", "0")) == 0 and not args.dry_run:
+            tag = os.environ.get("SLURM_JOB_ID", "local") + "-" + os.environ.get("SLURM_RESTART_COUNT", "0")
+            trimmed = trim_partial_metrics(output, saved, tag)
+            output.mkdir(parents=True, exist_ok=True)
+            (output / ("resume-" + tag + ".json")).write_text(json.dumps({
+                "checkpoint": args.resume, "epoch": saved["epoch"], "step": saved["extra"]["step"],
+                "world_size": len(saved["rng_states"]), "interrupted_log_records": trimmed}, indent=2))
+        del saved
     report = {"ablation": config["ablation"], "data_source": data_source, "sources": provenance,
               "output": str(output), "seed": config["seed"]}
     if args.dry_run:

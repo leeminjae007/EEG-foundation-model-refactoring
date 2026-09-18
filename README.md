@@ -57,7 +57,7 @@ python -m torch.distributed.run --standalone --nproc_per_node=1 finetune.py \
 
 기존 GR9-1의 I-JEPA 마스킹을 재현하려면 `--config configs/gr9_1.yaml`을 지정하세요. 변환된 `outputs/gr9_1_epoch40.pth`는 기존 I-JEPA 학습 가중치입니다. 새 geometry 조합의 학습 가중치나 성능으로 해석하면 안 됩니다.
 
-Downstream 설정 75개는 14 task × 5 seed와 추가 TUAB LR 5e-6 arm입니다. 2026-09-12 채택 정책대로 **모든 task에 warmup 5 epoch**를 사용합니다. GR9-1 pretrain 자체에는 warmup이 없습니다. 검증 BAcc와 AUROC/Kappa를 같은 run에서 선택하고, SEED-VIG는 R2를 선택합니다. 학습 종료 후 각 선택 가중치로 test를 평가합니다.
+Downstream 설정은 13 task × 5 seed와 추가 TUAB LR 5e-6 arm입니다. 2026-09-12 채택 정책대로 **모든 task에 warmup 5 epoch**를 사용합니다. GR9-1 pretrain 자체에는 warmup이 없습니다. 검증 BAcc와 AUROC/Kappa를 같은 run에서 선택하고, 학습 종료 후 각 선택 가중치로 test를 평가합니다.
 
 ```bash
 # 실제 데이터의 두 샘플로 한 update만 실행. FP32 CPU 검증용.

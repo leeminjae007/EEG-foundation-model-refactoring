@@ -8,11 +8,12 @@ from sklearn.metrics import (auc, balanced_accuracy_score, confusion_matrix, pre
                              recall_score, roc_auc_score)
 from src.modules.attention import MaskedAttention, DecoderAttention
 from src.modules.position_embedding import PositionEmbedding
+from src.modules.fusion import PatchFusionGate
 
 
 def capture(model, enabled):
     for module in model.modules():
-        if isinstance(module, (MaskedAttention, DecoderAttention, PositionEmbedding)):
+        if isinstance(module, (MaskedAttention, DecoderAttention, PositionEmbedding, PatchFusionGate)):
             module.capture = enabled
             module.diagnostics = {}
 
@@ -20,9 +21,14 @@ def capture(model, enabled):
 def measurements(model):
     result = {}
     for name, module in model.named_modules():
-        if isinstance(module, (MaskedAttention, DecoderAttention, PositionEmbedding)):
+        if isinstance(module, (MaskedAttention, DecoderAttention, PositionEmbedding, PatchFusionGate)):
             for key, value in module.diagnostics.items():
                 result[name + "/" + key] = float(value)
+        if isinstance(module, PatchFusionGate):
+            for parameter_name, parameter in module.named_parameters(recurse=False):
+                if parameter.grad is not None:
+                    result[name + "/gate/" + parameter_name + "_gradient_rms_pre_clip"] = float(
+                        parameter.grad.detach().float().square().mean().sqrt())
     for name, parameter in model.named_parameters():
         if name.endswith("fusion_gates"):
             values = parameter.detach().float()

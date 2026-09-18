@@ -15,17 +15,16 @@ from src.models.eeg_encoder import build_eeg_encoder
 from src.models.finetune.task_model import TaskModel
 from src.models.finetune.model_for_isruc import Model as SleepModel
 from src.utils.classification_losses import classification_loss
-from src.preprocessing.preprocessing_seedvig import _load_recording, SPLIT_FILES
 
 torch.set_num_threads(2)
 root = Path(__file__).resolve().parents[2]
 checkpoint = torch.load(root / "tests/reference/checkpoint-epoch-0040.pth", map_location="cpu")
 pretrain = checkpoint["resolved_config"]
-roster = ["tuab", "tuev", "chb", "seedv", "seedvig", "faced", "mumtaz",
-          "mentalarithmetic", "bciciv2a", "physionet_mi", "speech", "isruc", "hmc", "siena"]
+roster = ["tuab", "tuev", "chb", "seedv", "faced",
+          "mentalarithmetic", "bciciv2a", "physionet_mi", "isruc", "hmc", "siena"]
 report = {}
 for task_name in roster:
-    path = root / "configs/downstream" / ("gr9-1_warmup5_" + task_name + "_seed42.yaml")
+    path = root / "configs/downstream" / ("gr9-1_" + task_name + "_seed42.yaml")
     config = yaml.safe_load(path.read_text())
     dataset_name = config["data"]["dataset"]
     spec = get_dataset_spec(dataset_name)
@@ -60,7 +59,7 @@ for task_name in roster:
     model.eval()
     with torch.no_grad():
         item["logits"] = model(batch["x"], batch["channel_coordinates"], batch["channel_region_ids"], batch["channel_validity"])
-    if dataset_name in ("seed-v", "stress", "seed-vig"):
+    if dataset_name in ("seed-v", "stress"):
         model.train()
         torch.manual_seed(771)
         item["rng_before_train"] = torch.get_rng_state()
@@ -83,6 +82,4 @@ for task_name in roster:
     print(dataset_name, report[dataset_name], flush=True)
     del model, encoder, item
     gc.collect()
-samples, labels = _load_recording(SPLIT_FILES["train"][0])
-torch.save({"samples": samples[:2], "labels": labels[:2]}, root / "outputs/oracle-preprocessing.pth")
 (root / "outputs/oracle-datasets.json").write_text(json.dumps(report, indent=2))

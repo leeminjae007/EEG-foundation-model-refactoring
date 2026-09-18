@@ -3,5 +3,4 @@ ablation:
   name: pe_channel_id
   encoder: mjde
   position: channel_id
-  mask_mode: context_only
   pe_scope: both

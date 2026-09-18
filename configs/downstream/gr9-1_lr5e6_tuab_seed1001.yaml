@@ -1,0 +1,30 @@
+seed: 1001
+data:
+  dataset: tuab
+  dataset_dir: /gpfs/data/oermannlab/users/ml10266/Data/eeg_foundation_downstream/tuh_eeg_abnormal
+  num_workers: 8
+model:
+  checkpoint: outputs/gr9_1_epoch40.pth
+  head_dropout: 0.1
+  head_hidden_tokens: null
+optimization:
+  epochs: 20
+  batch_size_per_gpu: 64
+  gradient_accumulation_steps: 8
+  tokenizer_learning_rate: 5.0e-06
+  encoder_learning_rate: 5.0e-06
+  head_learning_rate: 5.0e-06
+  min_learning_rate: 1.0e-06
+  weight_decay: 5.0e-05
+  adam_betas:
+  - 0.9
+  - 0.999
+  adam_epsilon: 1.0e-08
+  label_smoothing: 0.0
+  gradient_clip_norm: 1.0
+  class_counts:
+  - 147894
+  - 149209
+runtime:
+  output: outputs/finetune/gr9-1_lr5e6_tuab_seed1001
+  log_every_steps: 100

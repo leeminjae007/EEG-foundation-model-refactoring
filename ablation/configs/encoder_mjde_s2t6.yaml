@@ -1,0 +1,6 @@
+base_config: configs/pretrain.yaml
+ablation:
+  name: encoder_mjde_s2t6
+  encoder: mjde_s2t6
+  position: shpe
+  pe_scope: both

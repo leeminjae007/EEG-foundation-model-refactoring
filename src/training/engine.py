@@ -4,6 +4,7 @@ from contextlib import nullcontext
 import json
 from pathlib import Path
 import math
+import os
 
 import torch
 import torch.distributed as dist
@@ -21,6 +22,7 @@ from src.training.diagnostics import (capture, fingerprint, measurements, person
 from src.training.metrics import metrics
 from src.training.runtime import ROOT, setup
 from src.training.scheduler import GroupCosineScheduler
+from src.training.pretrain_rng import initialize_pretrain_rng, pretrain_rng_mode, pretrain_rng_report
 
 
 def autocast(device):
@@ -50,6 +52,8 @@ def run_pretrain(config, args):
                                not config["runtime"]["deterministic"], False)
     data = config["data"]
     optimization = config["optimization"]
+    if "warmup_epochs" in optimization or "warmup_ratio" in optimization:
+        raise ValueError("Downstream warmup is not supported; remove the warmup setting")
     output = ROOT / config["runtime"]["output"]
     if args.smoke:
         output = ROOT / "outputs/smoke/pretrain"
@@ -78,15 +82,22 @@ def run_pretrain(config, args):
         optimizer, T_max=optimization["epochs"] * updates, eta_min=optimization["min_learning_rate"])
     start = 0
     step = 0
+    # All ranks initialize identical weights first. Resume restores saved RNG below.
+    initialize_pretrain_rng(config, rank)
     if args.resume:
         start, extra = load_checkpoint(ROOT / args.resume, model, optimizer, scheduler, device, rank,
-                                       expected_masking=config["masking"])
+                                       expected_masking=config["masking"],
+                                       expected_pretrain_rng=pretrain_rng_mode(config))
         step = extra["step"]
     backbone = model.backbone
     decoder = model.decoder
     if args.distributed:
         backbone = DistributedDataParallel(backbone, device_ids=[device.index])
         decoder = DistributedDataParallel(decoder, device_ids=[device.index])
+    rng_report = pretrain_rng_report(config, device, rank, bool(args.resume))
+    rng_report.update(start_epoch=start, start_step=step)
+    (output / ("rng-start-" + os.environ.get("SLURM_JOB_ID", "local") + "-rank" + str(rank) + ".json")).write_text(
+        json.dumps(rng_report, indent=2))
     for epoch in range(start, optimization["epochs"]):
         sampler.set_epoch(epoch)
         loader.generator.manual_seed(config["seed"] + epoch)
@@ -264,7 +275,7 @@ def evaluate(model, loader, task, dataset_name, device, world):
     return result
 
 
-def run_finetune(config, args):
+def run_finetune(config, args, policy=None):
     device, rank, world = setup(args.device, args.distributed, config["seed"], False, False, True)
     data = config["data"]
     optimization = config["optimization"]
@@ -298,9 +309,9 @@ def run_finetune(config, args):
                                   betas=tuple(optimization["adam_betas"]), eps=optimization["adam_epsilon"],
                                   weight_decay=optimization["weight_decay"])
     updates = math.ceil(len(loaders["train"]) / accumulation)
-    scheduler = GroupCosineScheduler(optimizer, optimization["epochs"] * updates,
-                                     optimization["min_learning_rate"],
-                                     round(optimization["warmup_epochs"] * updates))
+    scheduler_factory = GroupCosineScheduler if policy is None else policy.make_scheduler
+    scheduler = scheduler_factory(optimizer, optimization["epochs"] * updates,
+                                     optimization["min_learning_rate"])
     selectors = ["balanced_accuracy", "kappa"]
     if spec.task == "binary":
         selectors = ["balanced_accuracy", "auroc"]
@@ -315,10 +326,13 @@ def run_finetune(config, args):
         step, best = extra["step"], extra["best"]
     trainer = model
     if args.distributed:
-        trainer = DistributedDataParallel(model, device_ids=[device.index])
+        trainer = DistributedDataParallel(model, device_ids=[device.index],
+                                          find_unused_parameters=bool(policy and policy.head_first_epochs))
     for epoch in range(start, optimization["epochs"]):
         loaders["train"].sampler.set_epoch(epoch)
         trainer.train()
+        if policy is not None:
+            policy.on_epoch_start(model, epoch)
         optimizer.zero_grad(set_to_none=True)
         for index, batch in enumerate(loaders["train"]):
             group_start = index // accumulation * accumulation

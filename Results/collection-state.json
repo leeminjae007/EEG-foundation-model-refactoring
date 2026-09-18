@@ -1,0 +1,59 @@
+{
+  "published": {
+    "knn37-default": {
+      "experiment": "knn37-default",
+      "file": "knn37-default-20260915-1730.csv"
+    },
+    "tuab:head_first2_backbone_lr_x0p1": {
+      "experiment": "knn37-parameter-tuning-tuab-head-first2-backbone-lr1e6",
+      "file": "knn37-parameter-tuning-tuab-head-first2-backbone-lr1e6-20260915-1801.csv"
+    },
+    "tuab:head_h4": {
+      "experiment": "knn37-parameter-tuning-tuab-head-h4",
+      "file": "knn37-parameter-tuning-tuab-head-h4-20260915-1801.csv"
+    }
+  },
+  "checks": {
+    "knn37": {
+      "expected": 65,
+      "missing": 65
+    },
+    "cbramod-encoder": {
+      "expected": 65,
+      "missing": 65
+    },
+    "reve-pe4d": {
+      "expected": 65,
+      "missing": 65
+    },
+    "tuab:backbone_lr_x0p1": {
+      "expected": 5,
+      "missing": 1
+    },
+    "tuab:head_first2_backbone_lr_x0p1": {
+      "expected": 5,
+      "missing": 0
+    },
+    "tuab:head_h4": {
+      "expected": 5,
+      "missing": 0
+    },
+    "bciciv2a-beam": {
+      "status": "submitted"
+    },
+    "knn37-default": {
+      "expected": 65,
+      "missing": 0
+    },
+    "cbramod-encoder-ablation": {
+      "expected": 65,
+      "missing": 65
+    },
+    "reve4d-positional-encoding-ablation": {
+      "expected": 65,
+      "missing": 65
+    }
+  },
+  "last_error": "CalledProcessError(255, ['ssh', '-o', 'BatchMode=yes', 'bigpurple.nyumc.org', 'cat', '/gpfs/data/oermannlab/users/ml10266/workspace/EEG-founation-model/outputs/knn37_downstream_all13_20260915/manifest.json'])",
+  "checked_at": "2026-09-16T12:56:16.364821-04:00"
+}

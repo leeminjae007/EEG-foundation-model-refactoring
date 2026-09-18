@@ -1,0 +1,27 @@
+seed: 1001
+data:
+  dataset: isruc
+  dataset_dir: /gpfs/data/oermannlab/users/ml10266/Data/eeg_foundation_downstream/isruc/processed_filter_35
+  num_workers: 8
+model:
+  checkpoint: outputs/gr9_1_epoch40.pth
+  head_dropout: 0.1
+  head_hidden_tokens: null
+optimization:
+  epochs: 50
+  batch_size_per_gpu: 2
+  gradient_accumulation_steps: 32
+  tokenizer_learning_rate: 0.0001
+  encoder_learning_rate: 0.0001
+  head_learning_rate: 0.0001
+  min_learning_rate: 1.0e-06
+  weight_decay: 0.01
+  adam_betas:
+  - 0.9
+  - 0.999
+  adam_epsilon: 1.0e-08
+  label_smoothing: 0.1
+  gradient_clip_norm: 1.0
+runtime:
+  output: outputs/finetune/gr9-1_isruc_seed1001
+  log_every_steps: 100

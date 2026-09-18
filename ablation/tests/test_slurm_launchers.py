@@ -53,8 +53,10 @@ def test_encoder_submission_and_existing_jobs(shell):
     stub(binaries, "sbatch", 'printf "%s\\n" "$*" >> "$EVENTS"')
     run(SCRIPTS / "run_pretrain.sh", "encoder", "42")
     submitted = events.read_text().splitlines()
-    assert len(submitted) == 5
-    for line, arm in zip(submitted, ("labram", "cbramod", "csbrain", "mjde", "mjde_lite")):
+    arms = ("labram", "cbramod", "csbrain", "mjde", "mjde_lite",
+            "mjde_s2t6", "mjde_t2s6", "mjde_average")
+    assert len(submitted) == len(arms)
+    for line, arm in zip(submitted, arms):
         assert "--job-name=enc-" + arm + "-s42" in line
         assert "pretrain_flexible.slurm encoder_" + arm + " 42" in line
 
@@ -85,6 +87,16 @@ def test_replace_pending_preserves_running_and_racing_jobs(shell, tmp_path):
     stub(binaries, "squeue", 'if [[ -f "$STATE" ]]; then printf "101 RUNNING\\n"; else printf "101 PENDING\\n"; fi')
     run(SCRIPTS / "run_pretrain.sh", "--replace-pending", "encoder_labram", extra_env={"STATE": bash_path(state)})
     assert events.read_text().splitlines() == ["cancel --state=PENDING 101"]
+
+
+def test_mix1only_submission_has_distinct_short_name(shell):
+    binaries, events, run = shell
+    stub(binaries, "squeue", "exit 0")
+    stub(binaries, "sbatch", 'printf "%s\n" "$*" >> "$EVENTS"')
+    run(SCRIPTS / "run_pretrain.sh", "encoder_mjde_mix1only", "42")
+    submitted = events.read_text()
+    assert "--job-name=enc-mix1only-s42" in submitted
+    assert "pretrain_flexible.slurm encoder_mjde_mix1only 42" in submitted
 
 
 def test_reve_and_resume_arguments(shell):

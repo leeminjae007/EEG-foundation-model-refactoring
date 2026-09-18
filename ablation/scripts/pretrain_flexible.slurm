@@ -5,7 +5,7 @@
 #SBATCH --nodes=1-4
 #SBATCH --ntasks=4
 #SBATCH --gpus-per-task=a100:1
-#SBATCH --cpus-per-task=8
+#SBATCH --cpus-per-task=4
 #SBATCH --mem-per-gpu=32G
 #SBATCH --time=1-00:00:00
 #SBATCH --output=logs/ablation/%x-%j.out

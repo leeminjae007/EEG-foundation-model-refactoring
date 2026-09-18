@@ -1,4 +1,4 @@
-"""Call the authors' encoder forward methods; adapt only their token interfaces."""
+"""Native encoder blocks; common token/PE input and context-only masking."""
 
 from functools import partial
 import torch
@@ -6,6 +6,7 @@ from torch import nn
 
 from ablation.montage import region_order
 from ablation.sources import upstream
+from ablation.encoders.context_blocks import labram_block, cbramod_block, csbrain_block
 
 
 class TokenInput(nn.Module):
@@ -34,9 +35,12 @@ class PaperEncoder(nn.Module):
                 embed_dim=200, depth=depth, num_heads=10, mlp_ratio=4,
                 qkv_bias=True, qk_norm=partial(nn.LayerNorm, eps=1e-6),
                 norm_layer=partial(nn.LayerNorm, eps=1e-6), init_values=0.1,
-                num_classes=0, use_abs_pos_emb=False)
+                num_classes=0, use_abs_pos_emb=False,
+                drop_rate=config["encoder"]["dropout"],
+                attn_drop_rate=config["encoder"]["attention_dropout"], drop_path_rate=0.)
             self.core.patch_embed = FlatTokenInput()
             self.core.time_embed = None
+            self.core.cls_token = None
         elif self.name == "cbramod":
             module = upstream("cbramod", "models/cbramod.py")
             self.core = module.CBraMod(n_layer=depth)
@@ -48,9 +52,17 @@ class PaperEncoder(nn.Module):
             self.core = module.CSBrain(n_layer=depth, brain_regions=regions, sorted_indices=order)
             self.core.patch_embedding = TokenInput()
             self.core.proj_out = nn.Identity()
+            self.core.TemEmbedEEGLayer = nn.Identity()
+            self.core.BrainEmbedEEGLayer = nn.Identity()
             self.set_channels(config["data"]["channel_names"], "pretrain")
         else:
             raise ValueError(self.name)
+        if self.name != "labram":
+            for child in self.core.encoder.modules():
+                if isinstance(child, nn.Dropout):
+                    child.p = config["encoder"]["dropout"]
+                elif isinstance(child, nn.MultiheadAttention):
+                    child.dropout = config["encoder"]["attention_dropout"]
 
     def set_channels(self, names, dataset):
         if self.name != "csbrain":
@@ -69,15 +81,25 @@ class PaperEncoder(nn.Module):
             layer.mask_builder = builder
             layer.region_attn_mask = builder.get_mask()
             layer.region_indices_dict = builder.get_region_indices()
-        # DDP must not wait for gradients from regions absent in this montage.
-        for key, block in self.core.BrainEmbedEEGLayer.region_blocks.items():
-            block.requires_grad_(key in self.core.area_config)
 
     def forward(self, tokens, visible):
+        tokens = tokens.masked_fill(~visible[..., None], 0)
         if self.name == "labram":
-            output = self.core(tokens, return_patch_tokens=True)
-            return output.reshape_as(tokens)
-        output = self.core(tokens.contiguous())
+            output = tokens.flatten(1, 2)
+            flat_mask = visible.flatten(1, 2)
+            for block in self.core.blocks:
+                output = labram_block(block, output, flat_mask)
+            output = self.core.norm(output)
+            if self.core.fc_norm is not None:
+                output = self.core.fc_norm(output)
+            return output.reshape_as(tokens).masked_fill(~visible[..., None], 0)
+        output = tokens
+        if self.name == "csbrain":
+            output = output[:, self.core.sorted_indices]
+            visible = visible[:, self.core.sorted_indices]
+        function = cbramod_block if self.name == "cbramod" else csbrain_block
+        for block in self.core.encoder.layers:
+            output = function(block, output, visible)
         if self.name == "csbrain":
             output = output[:, self.inverse_order]
             if len(self.active_indices) != tokens.shape[1]:

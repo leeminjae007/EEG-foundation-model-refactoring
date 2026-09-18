@@ -7,7 +7,6 @@ import os
 import subprocess
 import sys
 
-import numpy as np
 import pytest
 import torch
 from torch.utils.data import default_collate
@@ -15,7 +14,6 @@ import yaml
 
 from scripts.convert_checkpoint import encoder_key
 from src.data.datasets.registry import get_dataset_spec
-from src.data.preprocessing.preprocessing_seedvig import _load_recording, SPLIT_FILES
 from src.modules.loss import downstream_loss
 from src.training.engine import build_finetune
 from src.training.runtime import ROOT, set_paths
@@ -35,11 +33,11 @@ def export():
 
 def test_datasets_and_models():
     paths = []
-    for path in sorted((ROOT / "configs/downstream").glob("gr9-1_warmup5_*_seed42.yaml")):
+    for path in sorted((ROOT / "configs/downstream").glob("gr9-1_*_seed42.yaml")):
         if "lr5e6" not in path.name:
             paths.append(path)
     report = {}
-    assert len(paths) == 14
+    assert len(paths) == 13
     for path in paths:
         config = yaml.safe_load(path.read_text())
         name = config["data"]["dataset"]
@@ -76,7 +74,7 @@ def test_datasets_and_models():
         item = {"eval_max_abs": float((logits - oracle["logits"]).abs().max()),
                 "input_shape": list(batch["x"].shape), "head_initialization_exact": True,
                 "all_three_splits_exact": True}
-        if name in ("seed-v", "stress", "seed-vig"):
+        if name in ("seed-v", "stress"):
             model.train()
             torch.set_rng_state(oracle["rng_before_train"])
             logits = model(batch["x"], batch["channel_coordinates"], batch["channel_validity"])
@@ -102,10 +100,3 @@ def test_datasets_and_models():
         del model, oracle
         gc.collect()
     (ROOT / "outputs/downstream-equivalence.json").write_text(json.dumps(report, indent=2))
-
-
-def test_preprocessing_real_recording():
-    reference = torch.load(ROOT / "outputs/oracle-preprocessing.pth")
-    samples, labels = _load_recording(SPLIT_FILES["train"][0])
-    np.testing.assert_array_equal(samples[:2], reference["samples"])
-    np.testing.assert_array_equal(labels[:2], reference["labels"])

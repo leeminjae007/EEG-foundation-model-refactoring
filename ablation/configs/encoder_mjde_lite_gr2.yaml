@@ -1,0 +1,6 @@
+base_config: configs/pretrain_gr2_geometry.yaml
+ablation:
+  name: mjde_lite_gr2_geometry
+  encoder: mjde_lite
+  position: shpe
+  pe_scope: both

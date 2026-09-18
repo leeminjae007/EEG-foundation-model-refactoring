@@ -34,24 +34,25 @@ def load_config(path, seen=()):
 def resolve_ablation(config):
     config = deepcopy(config)
     settings = config.setdefault("ablation", {})
-    allowed = {"encoder", "position", "mask_mode", "pe_scope", "depth", "name",
+    allowed = {"encoder", "position", "mask_mode", "protocol", "pe_scope", "depth", "name",
                "reve_freqs", "reve_noise_ratio", "channel_vocabulary"}
     unknown = set(settings) - allowed
     if unknown:
         raise ValueError("Unknown ablation options: " + str(sorted(unknown)))
-    defaults = {"encoder": "mjde", "position": "shpe", "mask_mode": "context_only",
+    legacy_mode = settings.pop("mask_mode", "context_only")
+    if legacy_mode != "context_only":
+        raise ValueError("dense_zero is retired; do not reuse its checkpoints")
+    defaults = {"encoder": "mjde", "position": "shpe", "protocol": "context_blocks_v1",
                 "pe_scope": "both", "reve_freqs": 4, "reve_noise_ratio": 0.0}
     for key, value in defaults.items():
         settings.setdefault(key, value)
     if settings["encoder"] not in ENCODERS or settings["position"] not in POSITIONS:
         raise ValueError("Unknown encoder or position embedding")
-    if settings["mask_mode"] not in ("context_only", "dense_zero"):
-        raise ValueError("mask_mode must be context_only or dense_zero")
+    if settings["protocol"] != "context_blocks_v1":
+        raise ValueError("Unknown encoder block protocol")
     if settings["pe_scope"] not in ("encoder", "both"):
         raise ValueError("pe_scope must be encoder or both")
-    if settings["encoder"] in ("labram", "cbramod", "csbrain") and settings["mask_mode"] != "dense_zero":
-        raise ValueError("Unmodified paper encoders require the common dense_zero protocol")
-    if "depth" in settings and (settings["encoder"] in ("mjde", "mjde_lite") or
+    if "depth" in settings and (settings["encoder"].startswith("mjde") or
                                 not isinstance(settings["depth"], int) or settings["depth"] < 1):
         raise ValueError("depth is a positive integer for paper encoders only; MJDE-lite is one stage")
     for location, expected in (("encoder", config["encoder"]["embed_dim"]),
@@ -70,7 +71,7 @@ def resolve_ablation(config):
         for spec in DATASET_SPECS.values():
             names.update(spec.dataset_class.channel_names)
         settings["channel_vocabulary"] = sorted({canonical(name) for name in names})
-    settings.setdefault("name", settings["encoder"] + "_" + settings["position"] + "_" + settings["mask_mode"])
+    settings.setdefault("name", settings["encoder"] + "_" + settings["position"] + "_context")
     if not settings["name"] or any(c not in "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_-" for c in settings["name"]):
         raise ValueError("ablation.name must contain only letters, digits, '_' and '-'")
     return config

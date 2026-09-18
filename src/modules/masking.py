@@ -26,10 +26,14 @@ def rectangle(channels, patches, height, width, device):
 def make_masks(batch, channels, patches, config, device, channel_coordinates=None):
     policy = config.get("policy", "ijepa_multiblock")
     if policy == "geometry_tubelet":
+        if "radius_m" in config:
+            raise ValueError("fixed-metric-radius masking is no longer supported")
         geometry = GeometryTubeletMaskingPolicy(
             config["mask_ratio"], config.get("min_radius_degrees"), config.get("max_radius_degrees"),
             config["min_time_patches"], config["max_time_patches"],
-            distance_metric=config.get("distance_metric", "geodesic"), radius_m=config.get("radius_m"))
+            distance_metric=config.get("distance_metric", "euclidean_m"),
+            spatial_selection=config.get("spatial_selection", "nearest_channels"),
+            min_channels=config.get("min_channels", 3), max_channels=config.get("max_channels", 7))
         valid = torch.ones(batch, channels, patches, dtype=torch.bool, device=device)
         return geometry(batch, channels, patches, valid, channel_coordinates)
     if policy != "ijepa_multiblock":

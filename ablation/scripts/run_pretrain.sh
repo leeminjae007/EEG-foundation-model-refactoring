@@ -9,10 +9,10 @@ group="${1:-encoder}"
 seed="${2:-42}"
 if (( $# >= 2 )); then shift 2; else shift "$#"; fi
 case "$group" in
-  encoder) arms=(encoder_labram encoder_cbramod encoder_csbrain encoder_mjde encoder_mjde_lite) ;;
+  encoder) arms=(encoder_labram encoder_cbramod encoder_csbrain encoder_mjde encoder_mjde_lite encoder_mjde_s2t6 encoder_mjde_t2s6 encoder_mjde_average) ;;
   pe) arms=(pe_none pe_channel_id pe_acpe pe_reve4d pe_shpe) ;;
-  all) arms=(encoder_labram encoder_cbramod encoder_csbrain encoder_mjde encoder_mjde_lite pe_none pe_channel_id pe_acpe pe_reve4d pe_shpe) ;;
-  encoder_labram|encoder_cbramod|encoder_csbrain|encoder_mjde|encoder_mjde_lite|pe_none|pe_channel_id|pe_acpe|pe_reve4d|pe_shpe) arms=("$group") ;;
+  all) arms=(encoder_labram encoder_cbramod encoder_csbrain encoder_mjde encoder_mjde_lite encoder_mjde_s2t6 encoder_mjde_t2s6 encoder_mjde_average pe_none pe_channel_id pe_acpe pe_reve4d pe_shpe) ;;
+  encoder_labram|encoder_cbramod|encoder_csbrain|encoder_mjde|encoder_mjde_lite|encoder_mjde_s2t6|encoder_mjde_t2s6|encoder_mjde_average|encoder_mjde_mix1only|pe_none|pe_channel_id|pe_acpe|pe_reve4d|pe_shpe) arms=("$group") ;;
   *) echo "Usage: $0 [--replace-pending] {encoder|pe|all|CONFIG_NAME} [SEED] [TRAIN_ARGS...]" >&2; exit 2 ;;
 esac
 [[ "$seed" =~ ^[0-9]+$ ]] || { echo "SEED must be a nonnegative integer" >&2; exit 2; }
@@ -22,6 +22,7 @@ export OMP_NUM_THREADS=2 OPENBLAS_NUM_THREADS=2 MKL_NUM_THREADS=2 PYTHONUNBUFFER
 for arm in "${arms[@]}"; do
   if [[ "$arm" == encoder_* ]]; then
     job_name="enc-${arm#encoder_}-s${seed}"
+    if [[ "$arm" == encoder_mjde_mix1only ]]; then job_name="enc-mix1only-s${seed}"; fi
   else
     job_name="pe-${arm#pe_}-s${seed}"
   fi

@@ -19,7 +19,9 @@ def write_lmdb(path, records, keys):
 
 
 @pytest.mark.parametrize("arm", ["encoder_labram", "encoder_cbramod", "encoder_csbrain", "encoder_mjde",
-                                "encoder_mjde_lite", "pe_none", "pe_channel_id", "pe_acpe", "pe_reve4d", "pe_shpe"])
+                                "encoder_mjde_lite", "encoder_mjde_s2t6", "encoder_mjde_t2s6",
+                                "encoder_mjde_average", "pe_none", "pe_channel_id", "pe_acpe",
+                                "pe_reve4d", "pe_shpe"])
 def test_pretrain_to_downstream_strict_loading_and_optimizer(tmp_path, arm):
     settings = resolve_ablation(load_config("ablation/configs/" + arm + ".yaml"))
     if "depth" in settings["ablation"]:
@@ -27,7 +29,7 @@ def test_pretrain_to_downstream_strict_loading_and_optimizer(tmp_path, arm):
     pretrained = build_pretrain(settings, torch.device("cpu"))
     path = tmp_path / "pretrain.pth"
     torch.save({"model": pretrained.state_dict(), "config": settings}, path)
-    downstream = load_config("configs/downstream/gr9-1_warmup5_seedv_seed42.yaml")
+    downstream = load_config("configs/downstream/gr9-1_seedv_seed42.yaml")
     downstream["model"]["checkpoint"] = str(path)
     with connected_engine() as engine:
         model = engine.build_finetune(downstream)
@@ -49,7 +51,7 @@ def test_sleep_head_keeps_sequence_dimension(tmp_path):
     pretrained = build_pretrain(settings, torch.device("cpu"))
     path = tmp_path / "pretrain.pth"
     torch.save({"model": pretrained.state_dict(), "config": settings}, path)
-    downstream = load_config("configs/downstream/gr9-1_warmup5_isruc_seed42.yaml")
+    downstream = load_config("configs/downstream/gr9-1_isruc_seed42.yaml")
     downstream["model"]["checkpoint"] = str(path)
     with connected_engine() as engine:
         model = engine.build_finetune(downstream).eval()
@@ -125,10 +127,10 @@ def test_real_engine_pretrain_resume_and_downstream_evaluation(tmp_path, monkeyp
 
         test_spec = replace(original_spec, dataset_class=PerSplitDataset)
         monkeypatch.setattr(engine, "get_dataset_spec", lambda name: test_spec)
-        downstream = load_config("configs/downstream/gr9-1_warmup5_seedv_seed42.yaml")
+        downstream = load_config("configs/downstream/gr9-1_seedv_seed42.yaml")
         downstream["model"]["checkpoint"] = str(tmp_path / "resumed/last.pth")
         downstream["data"].update(dataset_dir=str(downstream_data), num_workers=0)
-        downstream["optimization"].update(epochs=1, batch_size_per_gpu=5, warmup_epochs=0)
+        downstream["optimization"].update(epochs=1, batch_size_per_gpu=5)
         downstream["runtime"]["output"] = str(tmp_path / "downstream")
         args.resume = None
         engine.run_finetune(downstream, args)
