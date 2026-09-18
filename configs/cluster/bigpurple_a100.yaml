@@ -9,6 +9,7 @@ slurm:
     memory_per_gpu: 32G
     time: 3-00:00:00
     excluded_nodes: &id001
+    - a100-4007
     - a100-4011
     - a100-4012
     - a100-4015
