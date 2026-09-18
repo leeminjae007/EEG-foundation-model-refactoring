@@ -53,14 +53,27 @@ def submit(folder, manifest, kind, indices=None):
                 "--partition=" + entry.get("gpu_partitions", "a100_short,a100_long"),
                 "--time=" + entry.get("time_limit", "24:00:00"),
                 f"--export=ALL,MJ12_KIND=pretrain,MJ12_INDEX={index}"]
-        if manifest.get("pretrain_excluded_nodes"):
-            cmd += ["--exclude=" + ",".join(manifest["pretrain_excluded_nodes"])]
+        excluded = set(manifest.get("pretrain_excluded_nodes", []))
+        policy_path = Path(entry.get("source", folder)) / "configs/cluster/bigpurple_a100.yaml"
+        if policy_path.is_file():
+            policy = yaml.safe_load(policy_path.read_text())["slurm"]["pretrain"]
+            excluded.update(policy.get("excluded_nodes", []))
+        manifest["pretrain_excluded_nodes"] = sorted(excluded)
+        if excluded:
+            cmd += ["--exclude=" + ",".join(sorted(excluded))]
+        validation_job = manifest.get("validation_job")
+        if validation_job and not manifest.get("validation_dependency_applied"):
+            cmd += ["--dependency=afterok:" + validation_job]
     cmd.append(str(folder / "worker.sh"))
     job = subprocess.check_output(cmd, text=True).strip().split(";")[0]
     for i in indices:
         e = manifest["submitted_entries" if kind == "downstream" else "pretrain_entries"][i]
         e.setdefault("job_history", []).append(job + "_" + str(i) if kind == "downstream" else job)
         e["job"] = e["job_history"][-1]
+    if kind == "pretrain":
+        manifest["pretrain_job"] = job
+        if manifest.get("validation_job"):
+            manifest["validation_dependency_applied"] = True
     if kind == "downstream" and len(indices) == 40:
         manifest["downstream_submitted"] = True
     write_json(folder / "manifest.json", manifest)
@@ -152,6 +165,9 @@ def rank_environment(env):
 
 def rank_worker(folder, manifest):
     os.environ.update(rank_environment(os.environ))
+    task_tmp = Path("/tmp") / ("eegfm-" + os.environ["SLURM_JOB_ID"] + "-" + os.environ["RANK"])
+    task_tmp.mkdir(mode=0o700, parents=True, exist_ok=True)
+    os.environ["TMPDIR"] = str(task_tmp)
     e = manifest["pretrain_entries"][int(os.environ["MJ12_INDEX"])]
     if digest(e["config"]) != e["config_sha256"]:
         raise ValueError("Campaign config changed")
@@ -277,7 +293,7 @@ def monitor_step(folder):
                              dataset_fingerprint=saved["extra"]["dataset_fingerprint"])
                 del saved, model
             complete = True
-        elif state in terminal:
+        elif state in terminal and manifest.get("auto_resume", True):
             if entry["retries"] >= entry.get("max_timeout_resumes", config["optimization"]["epochs"]):
                 raise ValueError("Continuation limit reached before the target epoch")
             import torch

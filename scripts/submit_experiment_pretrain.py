@@ -28,11 +28,20 @@ def main():
         depth, gate = profile
         config["mae"]["decoder_depth"] = depth
         config["encoder"]["fusion_gate"] = gate
+    sys.path.insert(0, str(source))
+    from ablation.bootstrap import ensure_data_imports
+    ensure_data_imports()
+    from ablation.config import resolve_ablation
+    config = resolve_ablation(config)
     config["runtime"]["output"] = str(experiment / "pretrain")
     frozen = experiment / "configs/pretrain.yaml"; frozen.write_text(yaml.safe_dump(config, sort_keys=False), encoding="utf-8")
     controller = experiment / "controller"; controller.mkdir(exist_ok=True); controller_file = controller / "gr2_pretrain_campaign.py"; shutil.copy2(source / "scripts/gr2_pretrain_campaign.py", controller_file)
     entry = {"kind": "pretrain", "arm": experiment.name, "config": str(frozen), "config_sha256": digest(frozen), "source": str(source), "result_dir": str(experiment / "pretrain"), "job": None, "job_history": [], "retries": 0, "last_resume_epoch": 0, "max_timeout_resumes": 40, "time_limit": policy["time"], "gpu_partitions": policy["partitions"]}
     manifest.update({"python": sys.executable, "pretrain_launcher": "slurm_flexible", "preset": args.preset, "results_dir": str(experiment / "pretrain/report"), "pretrain_entries": [entry], "resource_policy": policy})
+    manifest.update(alias=experiment.name, monitor_interval_seconds=3600,
+                    pretrain_excluded_nodes=sorted(set(manifest.get("pretrain_excluded_nodes", [])) | set(policy.get("excluded_nodes", []))))
+    manifest["auto_resume"] = bool(policy.get("auto_resume", False))
+    entry["timeout_continuation"] = manifest["auto_resume"]
     worker = experiment / "worker.sh"; worker.write_text("#!/usr/bin/env bash\nset -euo pipefail\nexec " + sys.executable + " " + str(controller_file) + " worker --folder " + str(experiment) + "\n", encoding="utf-8"); worker.chmod(0o750)
     manifest_path.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
     if args.prepare_only: print(experiment); return

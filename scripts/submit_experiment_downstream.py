@@ -39,6 +39,9 @@ def main():
     if args.prepare_only: return
     account = args.account or cluster["account"]; logs = experiment / "downstream/logs"; logs.mkdir(parents=True, exist_ok=True)
     command = ["sbatch", "--parsable", "--account=" + account, "--job-name=" + experiment.name + "-ds", "--partition=" + policy["partitions"], "--nodes=1", "--ntasks=1", "--gpus-per-task=" + policy["gpu"] + ":1", "--cpus-per-task=" + str(policy["cpus_per_task"]), "--mem=" + policy["memory"], "--time=" + policy["time"], "--array=0-%d%%%d" % (len(entries)-1, policy["array_parallelism"]), "--output=" + str(logs / "%A_%a.out"), "--error=" + str(logs / "%A_%a.err"), "--wrap=exec " + sys.executable + " " + str(source / "scripts/downstream_experiment_worker.py") + " --experiment " + str(experiment)]
+    excluded = sorted(set(cluster["pretrain"].get("excluded_nodes", [])) | set(policy.get("excluded_nodes", [])))
+    if excluded:
+        command.append("--exclude=" + ",".join(excluded))
     if args.hold:
         command.append("--hold")
     job = subprocess.check_output(command, text=True).strip().split(";")[0]
