@@ -9,7 +9,10 @@ from pathlib import Path
 import statistics
 import time
 from typing import Any
-from zoneinfo import ZoneInfo
+try:  # Python 3.9+
+    from zoneinfo import ZoneInfo
+except ImportError:  # Python 3.8, supported by the cluster environment
+    from backports.zoneinfo import ZoneInfo
 
 from scripts import monitor_experiment_results as publisher
 

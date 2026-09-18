@@ -6,7 +6,10 @@ import os
 from pathlib import Path
 import shutil
 import subprocess
-from zoneinfo import ZoneInfo
+try:  # Python 3.9+
+    from zoneinfo import ZoneInfo
+except ImportError:  # Python 3.8, supported by the cluster environment
+    from backports.zoneinfo import ZoneInfo
 
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_ROOT = Path(os.environ.get(

@@ -26,6 +26,7 @@ dependencies:
       - mne==1.6.1
       - lmdb==1.4.1
       - PyYAML==6.0.3
+      - backports.zoneinfo==0.2.1; python_version < "3.9"
       - tqdm==4.69.0
       - pytest==8.3.5
       - openpyxl==3.1.5
