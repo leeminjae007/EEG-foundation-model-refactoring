@@ -2,13 +2,17 @@
 import argparse
 from datetime import datetime
 import json
+import os
 from pathlib import Path
 import shutil
 import subprocess
 from zoneinfo import ZoneInfo
 
 ROOT = Path(__file__).resolve().parents[1]
-DEFAULT_ROOT = Path("/gpfs/data/oermannlab/users/ml10266/workspace/eegfm/results")
+DEFAULT_ROOT = Path(os.environ.get(
+    "EEGFM_RESULTS_ROOT",
+    "/gpfs/data/oermannlab/users/" + os.environ.get("USER", "ml10266") + "/workspace/eegfm/results",
+))
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(); parser.add_argument("experiment_name"); parser.add_argument("--results-root", type=Path, default=DEFAULT_ROOT)
