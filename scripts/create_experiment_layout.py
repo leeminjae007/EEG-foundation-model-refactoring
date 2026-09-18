@@ -20,7 +20,21 @@ if __name__ == "__main__":
     folder = args.results_root / (stamp + "-" + args.experiment_name)
     if folder.exists(): raise FileExistsError(folder)
     folder.mkdir(parents=True)
-    shutil.copytree(ROOT, folder / "source", ignore=shutil.ignore_patterns(".git", ".venv*", "outputs", "Results", "cache", "tmp", "__pycache__", "*.pyc", "Data"))
+    standard_ignore = shutil.ignore_patterns(".git", ".venv*", "outputs", "Results", "cache", "tmp", "__pycache__", "*.pyc", "Data", "_smoke*")
+
+    def snapshot_ignore(directory, names):
+        ignored = set(standard_ignore(directory, names))
+        # Usually results is outside the repository.  If a caller chooses a
+        # repository-local root (for a smoke test, for example), never copy
+        # the just-created experiment back into its own source snapshot.
+        parent = Path(directory)
+        for name in names:
+            candidate = parent / name
+            if folder.is_relative_to(candidate):
+                ignored.add(name)
+        return ignored
+
+    shutil.copytree(ROOT, folder / "source", ignore=snapshot_ignore)
     for name in ("configs", "pretrain/checkpoints", "pretrain/logs", "pretrain/cache", "pretrain/tmp", "downstream"):
         (folder / name).mkdir(parents=True, exist_ok=True)
     commit = subprocess.check_output(["git", "-C", str(ROOT), "rev-parse", "HEAD"], text=True).strip()
