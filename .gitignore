@@ -7,7 +7,13 @@ venv/
 
 # Training data, caches, outputs, and logs
 cache/
+# Dataset artifacts are large and must stay local, but the Python package
+# `src/data/` is application source and has to be part of every snapshot.
 data/
+!src/data/
+!src/data/**
+src/data/**/__pycache__/
+src/data/**/*.pyc
 processed/
 outputs/
 logs/

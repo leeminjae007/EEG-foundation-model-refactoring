@@ -7,7 +7,14 @@ import sys
 import yaml
 
 SEEDS = (42, 696, 1001, 1234, 3407)
-DATASETS = ("chb", "siena", "physionet_mi", "tuev", "tuab", "faced", "seedv", "mentalarithmetic", "isruc", "hmc")
+# Keep this order explicit in the array manifest.  It matches the requested
+# campaign and, unlike the former ten-dataset default, includes both processed
+# TUH clinical datasets.
+DATASETS = (
+    "tuab", "tuev", "tusl", "tusz", "chb", "seedv", "faced",
+    "mentalarithmetic", "physionet_mi", "isruc", "hmc", "siena",
+)
+TEMPLATE_PREFIX = {"tusz": "nearest3_7", "tusl": "nearest3_7"}
 
 def warmup(value):
     if isinstance(value, dict): return any("warmup" in str(k).lower() or warmup(v) for k, v in value.items())
@@ -22,7 +29,8 @@ def main():
     config_dir = experiment / "configs/downstream"; config_dir.mkdir(parents=True, exist_ok=True); entries = []
     for dataset in DATASETS:
         for seed in SEEDS:
-            template = source / ("configs/downstream/gr9-1_%s_seed%d.yaml" % (dataset, seed)); config = yaml.safe_load(template.read_text())
+            prefix = TEMPLATE_PREFIX.get(dataset, "gr9-1")
+            template = source / ("configs/downstream/%s_%s_seed%d.yaml" % (prefix, dataset, seed)); config = yaml.safe_load(template.read_text())
             if warmup(config): raise ValueError("downstream warmup is forbidden: " + str(template))
             output = experiment / "downstream" / dataset / ("seed-%d" % seed); config["model"]["checkpoint"] = str(checkpoint); config["runtime"]["output"] = str(output); config["data"]["num_workers"] = 2
             path = config_dir / ("%s_seed%d.yaml" % (dataset, seed)); path.write_text(yaml.safe_dump(config, sort_keys=False), encoding="utf-8")
