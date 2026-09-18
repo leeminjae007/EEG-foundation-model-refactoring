@@ -14,8 +14,8 @@ def warmup(value):
     return any(warmup(v) for v in value) if isinstance(value, list) else False
 
 def main():
-    parser = argparse.ArgumentParser(); parser.add_argument("--experiment", required=True, type=Path); parser.add_argument("--checkpoint", required=True, type=Path); parser.add_argument("--account", default=None); parser.add_argument("--prepare-only", action="store_true")
-    args = parser.parse_args(); experiment = args.experiment.resolve(); source = experiment / "source"; checkpoint = args.checkpoint.resolve()
+    parser = argparse.ArgumentParser(); parser.add_argument("--experiment", required=True, type=Path); parser.add_argument("--checkpoint", type=Path); parser.add_argument("--account", default=None); parser.add_argument("--prepare-only", action="store_true")
+    args = parser.parse_args(); experiment = args.experiment.resolve(); source = experiment / "source"; checkpoint = (args.checkpoint or experiment / "pretrain/checkpoint-epoch-0040.pth").resolve()
     if not (checkpoint.is_file() and source.is_dir()): raise FileNotFoundError("verified checkpoint and experiment/source are required")
     cluster = yaml.safe_load((source / "configs/cluster/bigpurple_a100.yaml").read_text())["slurm"]; policy = cluster["downstream"]
     config_dir = experiment / "configs/downstream"; config_dir.mkdir(parents=True, exist_ok=True); entries = []
