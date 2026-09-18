@@ -3,7 +3,7 @@
 slurm:
   account: system
   pretrain:
-    partitions: a100_short,a100_long
+    partitions: a100_long
     gpu: a100
     nodes: 1-4
     tasks: 4
