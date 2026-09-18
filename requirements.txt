@@ -1,5 +1,9 @@
 # Python 3.8.16; versions recorded by the completed GR9-1 run.
+#
+# For CUDA training, prefer `conda env create -f environment.yml`.  A plain
+# pip install cannot by itself guarantee the CUDA-enabled PyTorch build.
 torch==2.0.1
+torchvision==0.15.2
 numpy==1.24.4
 scipy==1.10.1
 mne==1.6.1
@@ -12,3 +16,10 @@ tqdm==4.69.0
 pytest==8.3.5
 openpyxl==3.1.5
 natsort==8.4.0
+matplotlib==3.7.5
+einops==0.8.1
+timm==0.4.12
+# Baseline/reference and experiment-search dependencies.
+transformers==4.39.3
+optuna==3.6.1
+wandb==0.16.6
