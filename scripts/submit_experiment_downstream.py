@@ -14,9 +14,10 @@ def warmup(value):
     return any(warmup(v) for v in value) if isinstance(value, list) else False
 
 def main():
-    parser = argparse.ArgumentParser(); parser.add_argument("--experiment", required=True, type=Path); parser.add_argument("--checkpoint", type=Path); parser.add_argument("--account", default=None); parser.add_argument("--prepare-only", action="store_true")
+    parser = argparse.ArgumentParser(); parser.add_argument("--experiment", required=True, type=Path); parser.add_argument("--checkpoint", type=Path); parser.add_argument("--account", default=None); parser.add_argument("--hold", action="store_true", help="Submit the array held until the pretrain verifier releases it."); parser.add_argument("--prepare-only", action="store_true")
     args = parser.parse_args(); experiment = args.experiment.resolve(); source = experiment / "source"; checkpoint = (args.checkpoint or experiment / "pretrain/checkpoint-epoch-0040.pth").resolve()
-    if not (checkpoint.is_file() and source.is_dir()): raise FileNotFoundError("verified checkpoint and experiment/source are required")
+    if not source.is_dir(): raise FileNotFoundError("experiment/source is required")
+    if not args.hold and not checkpoint.is_file(): raise FileNotFoundError("verified checkpoint is required unless --hold is used")
     cluster = yaml.safe_load((source / "configs/cluster/bigpurple_a100.yaml").read_text())["slurm"]; policy = cluster["downstream"]
     config_dir = experiment / "configs/downstream"; config_dir.mkdir(parents=True, exist_ok=True); entries = []
     for dataset in DATASETS:
@@ -30,5 +31,11 @@ def main():
     if args.prepare_only: return
     account = args.account or cluster["account"]; logs = experiment / "downstream/logs"; logs.mkdir(parents=True, exist_ok=True)
     command = ["sbatch", "--parsable", "--account=" + account, "--job-name=" + experiment.name + "-ds", "--partition=" + policy["partitions"], "--nodes=1", "--ntasks=1", "--gpus-per-task=" + policy["gpu"] + ":1", "--cpus-per-task=" + str(policy["cpus_per_task"]), "--mem=" + policy["memory"], "--time=" + policy["time"], "--array=0-%d%%%d" % (len(entries)-1, policy["array_parallelism"]), "--output=" + str(logs / "%A_%a.out"), "--error=" + str(logs / "%A_%a.err"), "--wrap=exec " + sys.executable + " " + str(source / "scripts/downstream_experiment_worker.py") + " --experiment " + str(experiment)]
-    print(subprocess.check_output(command, text=True).strip())
+    if args.hold:
+        command.append("--hold")
+    job = subprocess.check_output(command, text=True).strip().split(";")[0]
+    manifest_path = experiment / "manifest.json"; manifest = json.loads(manifest_path.read_text())
+    manifest["downstream_job"] = job; manifest["downstream_state"] = "held" if args.hold else "submitted"
+    manifest_path.write_text(json.dumps(manifest, indent=2) + "\n")
+    print(job)
 if __name__ == "__main__": main()
