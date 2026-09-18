@@ -11,7 +11,7 @@ from zoneinfo import ZoneInfo
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_ROOT = Path(os.environ.get(
     "EEGFM_RESULTS_ROOT",
-    "/gpfs/data/oermannlab/users/" + os.environ.get("USER", "ml10266") + "/workspace/eegfm/results",
+    "/gpfs/data/oermannlab/users/ml10266/workspace/eegfm/results",
 ))
 
 if __name__ == "__main__":

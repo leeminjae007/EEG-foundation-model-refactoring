@@ -76,7 +76,7 @@ source scripts/activate.sh
 
 ### 격리된 실험을 한 번에 제출
 
-아래 명령 하나가 뉴욕 시간 기준 결과 폴더와 source/config snapshot을 만들고, A100 long pretrain, held downstream 50-seed array, 그리고 CPU-only release monitor를 함께 제출합니다.
+아래 명령 하나가 뉴욕 시간 기준 결과 폴더와 source/config snapshot을 만들고, A100 long pretrain, held downstream 50-seed array, 그리고 CPU-only release monitor를 함께 제출합니다. 기본 결과 루트는 공용 `/gpfs/data/oermannlab/users/ml10266/workspace/eegfm/results/`이며, `EEGFM_RESULTS_ROOT`를 설정한 경우에만 그 경로로 override합니다.
 
 ```bash
 python scripts/launch_experiment_pretrain.py gr2-d2-static
