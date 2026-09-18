@@ -1,0 +1,21 @@
+# Shared BigPurple policy. Override account or Python via the submit command,
+# not by editing this file for each experiment.
+slurm:
+  account: system
+  pretrain:
+    partitions: a100_short,a100_long
+    gpu: a100
+    nodes: 1-4
+    tasks: 4
+    cpus_per_task: 4
+    memory_per_gpu: 32G
+    time: '04:00:00'
+  downstream:
+    partitions: a100_dev,a100_short,a100_long
+    gpu: a100
+    nodes: 1
+    tasks: 1
+    cpus_per_task: 2
+    memory: 32G
+    time: '04:00:00'
+    array_parallelism: 4
