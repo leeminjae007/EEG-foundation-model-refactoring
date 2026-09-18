@@ -1,5 +1,6 @@
 """Create an isolated experiment and immediately submit its A100 pretrain."""
 import argparse
+import importlib
 import json
 from pathlib import Path
 import shlex
@@ -20,6 +21,29 @@ parser.add_argument(
 parser.add_argument("--results-root")
 parser.add_argument("--prepare-only", action="store_true")
 args = parser.parse_args()
+
+
+def require_training_environment():
+    missing = []
+    for module in ("torch", "yaml", "numpy", "scipy", "mne", "lmdb", "sklearn", "h5py", "pandas"):
+        try:
+            importlib.import_module(module)
+        except ImportError:
+            missing.append(module)
+    if missing:
+        raise SystemExit(
+            "Training environment is not active (missing: %s). Run `conda env create -f environment.yml` "
+            "once, then `conda activate eeg-foundation-model-cu118`." % ", ".join(missing)
+        )
+    import torch
+    if torch.__version__ != "2.0.1":
+        raise SystemExit(
+            "Expected torch 2.0.1, found %s. Activate eeg-foundation-model-cu118 before submitting." % torch.__version__
+        )
+
+
+if not args.prepare_only:
+    require_training_environment()
 
 # A matching experiment name selects the named profile, while --preset lets a
 # user choose a more descriptive folder name without changing its settings.

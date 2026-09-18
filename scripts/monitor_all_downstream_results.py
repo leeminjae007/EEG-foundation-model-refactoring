@@ -9,10 +9,10 @@ from pathlib import Path
 import statistics
 import time
 from typing import Any
-try:  # Python 3.9+
+try:
     from zoneinfo import ZoneInfo
-except ImportError:  # Python 3.8, supported by the cluster environment
-    from backports.zoneinfo import ZoneInfo
+except ImportError:
+    ZoneInfo = None
 
 from scripts import monitor_experiment_results as publisher
 
@@ -36,6 +36,8 @@ METRIC_ORDER = ("balanced_accuracy", "auroc", "auprc", "weighted_f1", "kappa")
 
 def stamp(manifest: dict[str, Any]) -> str:
     created = datetime.fromisoformat(manifest["created_utc"])
+    if ZoneInfo is None:
+        return created.strftime("%Y%m%d-%H%M")
     return created.astimezone(ZoneInfo("America/New_York")).strftime("%Y%m%d-%H%M")
 
 

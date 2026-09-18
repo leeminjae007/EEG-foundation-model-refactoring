@@ -6,10 +6,7 @@ import os
 from pathlib import Path
 import shutil
 import subprocess
-try:  # Python 3.9+
-    from zoneinfo import ZoneInfo
-except ImportError:  # Python 3.8, supported by the cluster environment
-    from backports.zoneinfo import ZoneInfo
+import time
 
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_ROOT = Path(os.environ.get(
@@ -17,9 +14,26 @@ DEFAULT_ROOT = Path(os.environ.get(
     "/gpfs/data/oermannlab/users/ml10266/workspace/eegfm/results",
 ))
 
+
+def new_york_stamp():
+    """Return New York wall time without requiring zoneinfo on Python 3.8."""
+    if hasattr(time, "tzset"):
+        previous = os.environ.get("TZ")
+        try:
+            os.environ["TZ"] = "America/New_York"
+            time.tzset()
+            return datetime.now().strftime("%y%m%d-%H%M")
+        finally:
+            if previous is None:
+                os.environ.pop("TZ", None)
+            else:
+                os.environ["TZ"] = previous
+            time.tzset()
+    return datetime.utcnow().strftime("%y%m%d-%H%M")
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(); parser.add_argument("experiment_name"); parser.add_argument("--results-root", type=Path, default=DEFAULT_ROOT)
-    args = parser.parse_args(); stamp = datetime.now(ZoneInfo("America/New_York")).strftime("%y%m%d-%H%M")
+    args = parser.parse_args(); stamp = new_york_stamp()
     folder = args.results_root / (stamp + "-" + args.experiment_name)
     if folder.exists(): raise FileExistsError(folder)
     folder.mkdir(parents=True)
