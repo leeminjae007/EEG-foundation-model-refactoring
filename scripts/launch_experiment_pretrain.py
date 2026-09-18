@@ -36,7 +36,8 @@ def require_training_environment():
             "once, then `conda activate eeg-foundation-model-cu118`." % ", ".join(missing)
         )
     import torch
-    if torch.__version__ != "2.0.1":
+    installed_version = torch.__version__.split("+", 1)[0]
+    if installed_version != "2.0.1":
         raise SystemExit(
             "Expected torch 2.0.1, found %s. Activate eeg-foundation-model-cu118 before submitting." % torch.__version__
         )

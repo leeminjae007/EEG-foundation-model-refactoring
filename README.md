@@ -27,7 +27,7 @@ conda activate eeg-foundation-model-cu118
 python -m pip check
 ```
 
-`environment.yml`은 Python 3.9 환경을 만들고 [requirements.txt](requirements.txt)의 동일한 pinned package set을 pip로 설치합니다. 여기에는 `torch=2.0.1`, `torchvision=0.15.2`와 CUDA 11.8 runtime wheel 의존성이 포함됩니다. Slurm이 GPU를 할당한 뒤에는 다음으로 CUDA build와 GPU 노출을 확인합니다.
+`environment.yml`은 Python 3.9 환경을 만들고 [requirements.txt](requirements.txt)의 동일한 pinned package set을 pip로 설치합니다. 여기에는 `torch=2.0.1`, `torchvision=0.15.2`와 pip wheel의 CUDA runtime 의존성이 포함됩니다. PyPI Linux wheel은 `2.0.1+cu117`로 표기될 수 있으며 A100/L40S에서 지원됩니다. Slurm이 GPU를 할당한 뒤에는 다음으로 CUDA build와 GPU 노출을 확인합니다.
 
 ```bash
 python -c "import torch; print(torch.__version__, torch.version.cuda, torch.cuda.is_available())"
