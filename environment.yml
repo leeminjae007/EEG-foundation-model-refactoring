@@ -1,37 +1,13 @@
 name: eeg-foundation-model-cu118
 
-# Reproducible GPU environment for BigPurple A100/L40S experiments.
-# Python 3.8 is retained because the existing validated training environment
-# and checkpoint tooling were built with Python 3.8.16.
+# Keep Conda solving minimal on BigPurple. The complete, pinned runtime is
+# installed by pip from requirements.txt, including torch 2.0.1 and CUDA 11.8
+# runtime wheels. This makes Conda and pip/venv resolve the same package set.
 channels:
-  - pytorch
-  - nvidia
   - conda-forge
 
 dependencies:
-  - python=3.8.16
-  - pip=24.0
-  # These pins supply a CUDA 11.8-capable PyTorch build.  GPU drivers are
-  # supplied by Slurm nodes; do not install a system CUDA toolkit per user.
-  - pytorch=2.0.1
-  - pytorch-cuda=11.8
-  - torchvision=0.15.2
-  - numpy=1.24.4
-  - scipy=1.10.1
-  - pandas=1.5.3
-  - scikit-learn=1.2.2
-  - h5py=3.8.0
+  - python=3.9
+  - pip
   - pip:
-      - matplotlib==3.7.5
-      - mne==1.6.1
-      - lmdb==1.4.1
-      - PyYAML==6.0.3
-      - tqdm==4.69.0
-      - pytest==8.3.5
-      - openpyxl==3.1.5
-      - natsort==8.4.0
-      - einops==0.8.1
-      - timm==0.4.12
-      - transformers==4.39.3
-      - optuna==3.6.1
-      - wandb==0.16.6
+      - -r requirements.txt
