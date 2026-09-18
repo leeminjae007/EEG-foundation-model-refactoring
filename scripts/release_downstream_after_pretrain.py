@@ -13,6 +13,22 @@ def write_manifest(path, manifest):
     temporary.replace(path)
 
 
+def slurm_state(job_id):
+    """Return the current accounting state for one parent pretrain job."""
+    result = subprocess.run(
+        ["sacct", "-X", "-n", "-P", "-j", str(job_id), "--format=State"],
+        check=True, stdout=subprocess.PIPE, text=True,
+    )
+    for line in result.stdout.splitlines():
+        state = line.strip().split("|", 1)[0].split()[0] if line.strip() else ""
+        if state:
+            return state
+    return "UNKNOWN"
+
+
+TERMINAL_FAILURES = {"CANCELLED", "FAILED", "NODE_FAIL", "BOOT_FAIL", "OUT_OF_MEMORY"}
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--experiment", required=True, type=Path)
@@ -26,6 +42,21 @@ def main():
         raise FileNotFoundError("missing isolated pretrain controller: " + str(controller))
 
     while True:
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        pretrain_job = manifest.get("pretrain_job") or manifest["pretrain_entries"][0].get("job")
+        state = slurm_state(pretrain_job)
+        if state in TERMINAL_FAILURES:
+            # A held downstream array has no valid checkpoint to wait for once
+            # pretraining is terminally unsuccessful.  Cancel it explicitly
+            # rather than retaining an inert scheduler entry.
+            subprocess.run(["scancel", args.downstream_job], check=False)
+            manifest["downstream_state"] = "cancelled"
+            manifest["downstream_cancel_reason"] = "pretrain_" + state.lower()
+            manifest["downstream_cancelled_for_pretrain_job"] = str(pretrain_job)
+            write_manifest(manifest_path, manifest)
+            print("cancelled downstream job %s after pretrain %s (%s)" %
+                  (args.downstream_job, pretrain_job, state), flush=True)
+            return
         # The controller is the sole authority for strict checkpoint loading,
         # config matching, optimizer/scheduler and four-rank RNG validation.
         result = subprocess.run([sys.executable, str(controller), "step", "--folder", str(experiment)])
