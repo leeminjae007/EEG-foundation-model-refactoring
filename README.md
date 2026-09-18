@@ -15,7 +15,45 @@ MLP는 사용하는 block 안의 `nn.Sequential`로 충분하므로 별도 wrapp
 
 ## 환경
 
-이 작업 공간의 `.venv`는 이미 구성했습니다. Python 3.8.16, 실제 GR9-1과 같은 PyTorch 2.0.1 / CUDA 11.8 binary를 사용합니다. 기존 환경의 torch symlink를 따라가지 않고 Python 패키지와 필요한 native library를 새 환경에 복사했습니다. 사용자 site-packages를 사용하지 않습니다.
+Python 3.8.16과 PyTorch 2.0.1 / CUDA 11.8 조합을 기준으로 검증했습니다. 환경을 새로 만드는 경우에는 아래 **Conda** 또는 **pip/venv** 중 하나만 선택하면 됩니다. Conda 방식은 [environment.yml](environment.yml) 하나로 충분합니다. [requirements.txt](requirements.txt)는 pip/venv 설치와 기존 BigPurple workflow를 위한 직접 의존성 목록이므로 계속 유지합니다.
+
+### Conda (권장: 새 계정 또는 새 작업 디렉터리)
+
+```bash
+git clone https://github.com/leeminjae007/EEG-foundation-model-refactoring.git
+cd EEG-foundation-model-refactoring
+conda env create -f environment.yml
+conda activate eeg-foundation-model-cu118
+python -m pip check
+```
+
+`environment.yml`은 `pytorch=2.0.1`, `pytorch-cuda=11.8`, `torchvision=0.15.2`를 함께 고정합니다. Slurm이 GPU를 할당한 뒤에는 다음으로 CUDA build와 GPU 노출을 확인합니다.
+
+```bash
+python -c "import torch; print(torch.__version__, torch.version.cuda, torch.cuda.is_available())"
+```
+
+### pip / venv
+
+CUDA-enabled PyTorch wheel을 먼저 설치한 뒤 나머지 의존성을 설치합니다. 단순한 `pip install -r requirements.txt`만으로는 설치 머신의 CUDA wheel 선택을 보장할 수 없습니다.
+
+```bash
+git clone https://github.com/leeminjae007/EEG-foundation-model-refactoring.git
+cd EEG-foundation-model-refactoring
+python3.8 -m venv .venv
+source .venv/bin/activate
+python -m pip install --upgrade pip
+python -m pip install --index-url https://download.pytorch.org/whl/cu118 \
+  torch==2.0.1 torchvision==0.15.2
+python -m pip install -r requirements.txt
+python -m pip check
+```
+
+GPU node에서 같은 CUDA 확인 명령을 실행한 뒤에만 GPU 학습을 제출하세요. 로그인 노드는 GPU가 없을 수 있으므로 `torch.cuda.is_available()`가 `False`여도 wheel 오류라고 단정하면 안 됩니다.
+
+### BigPurple의 기존 검증 환경 복제
+
+현재 작업 공간의 `.venv`는 Python 3.8.16, 실제 GR9-1과 같은 PyTorch 2.0.1 / CUDA 11.8 binary를 사용합니다. 기존 환경의 torch symlink를 따라가지 않고 Python 패키지와 필요한 native library를 새 환경에 복사했습니다. 사용자 site-packages를 사용하지 않습니다.
 
 ```bash
 cd /gpfs/data/oermannlab/users/ml10266/workspace/EEG-founation-model
@@ -31,6 +69,8 @@ source scripts/activate.sh
 ```
 
 [requirements.txt](requirements.txt)는 필요한 직접 의존성, [requirements-lock.txt](requirements-lock.txt)는 설치된 전체 버전, [native library 기록](docs/torch_runtime_copy.json)은 실제 binary 출처입니다. Venv의 표준 라이브러리와 interpreter 기반은 Python 3.8.16 설치를 사용하지만, 학습 패키지와 프로젝트 소스는 독립적입니다.
+
+다른 BigPurple 계정은 `ml10266` 작업 디렉터리에 쓰기 권한이 없으므로, 본인 작업 경로에 clone하고 본인 `outputs/`를 사용해야 합니다. 공유 데이터 경로는 읽기 권한이 별도로 필요하며, Slurm 제출도 본인 account/QoS로 이루어집니다.
 
 ## 실행
 
