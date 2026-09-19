@@ -14,4 +14,15 @@ if __name__ == "__main__":
     if not result.exists():
         command = [sys.executable, str(source / "finetune.py"), "--config", str(args.config)] + (["--resume", args.resume] if args.resume else [])
         subprocess.run(command, cwd=source, check=True)
+    # `last.pth` contains the post-finetune encoder state, including gates.
+    # It is deliberately distinct from the validation-selected best checkpoint
+    # used for test metrics in result.json.
+    final_checkpoint = output / "last.pth"
+    if final_checkpoint.is_file():
+        subprocess.run([
+            sys.executable, str(source / "scripts/visualize_fusion_gates.py"),
+            "--checkpoint", str(final_checkpoint),
+            "--output-dir", str(output / "gate_final"),
+            "--prefix", "final_fusion_gate",
+        ], cwd=source, check=True)
     subprocess.run([sys.executable, str(source / "scripts/experiment_results.py"), "--experiment", str(args.experiment), "--dataset", args.dataset, "--seed", str(args.seed), "--result", str(result)], check=True)

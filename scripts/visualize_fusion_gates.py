@@ -21,6 +21,8 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--checkpoint", required=True, type=Path)
     parser.add_argument("--output-dir", required=True, type=Path)
+    parser.add_argument("--prefix", default="fusion_gate",
+                        help="artifact prefix; use a distinct value for downstream final gates")
     args = parser.parse_args()
     saved = torch.load(args.checkpoint, map_location="cpu")
     state = encoder_state(saved)
@@ -33,7 +35,7 @@ def main():
         image = axis.imshow(gates, aspect="auto", vmin=0, vmax=1, cmap="coolwarm")
         axis.set(xlabel="feature dimension", ylabel="fusion stage", yticks=range(3), yticklabels=["stage 1", "stage 2", "stage 3"], title="Static fusion gate: S→T weight")
         fig.colorbar(image, ax=axis, label="sigmoid(gate)")
-        path = args.output_dir / "fusion_gate_static.png"; fig.tight_layout(); fig.savefig(path, dpi=180); plt.close(fig)
+        path = args.output_dir / (args.prefix + "_static.png"); fig.tight_layout(); fig.savefig(path, dpi=180); plt.close(fig)
         report.update(stage_mean=gates.mean(axis=1).tolist(), stage_sd=gates.std(axis=1).tolist(), artifacts=[str(path)])
     else:
         rows = []
@@ -46,9 +48,9 @@ def main():
         image = axis.imshow(values, aspect="auto", cmap="viridis")
         axis.set(xlabel="input route (S→T, T→S)", ylabel="stage × gate output", xticks=[0, 1], xticklabels=["S→T", "T→S"], title="Patch-gate learned coefficient norms")
         fig.colorbar(image, ax=axis, label="L2 norm")
-        path = args.output_dir / "fusion_gate_patch_coefficients.png"; fig.tight_layout(); fig.savefig(path, dpi=180); plt.close(fig)
+        path = args.output_dir / (args.prefix + "_patch_coefficients.png"); fig.tight_layout(); fig.savefig(path, dpi=180); plt.close(fig)
         report.update(stage_route_norms=[row.mean(axis=1).tolist() for row in rows], artifacts=[str(path)])
-    (args.output_dir / "fusion_gate_report.json").write_text(json.dumps(report, indent=2) + "\n")
+    (args.output_dir / (args.prefix + "_report.json")).write_text(json.dumps(report, indent=2) + "\n")
 
 
 if __name__ == "__main__":
