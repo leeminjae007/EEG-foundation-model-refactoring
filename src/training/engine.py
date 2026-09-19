@@ -177,7 +177,14 @@ def build_finetune(config):
     weights = {}
     for key, value in checkpoint["model"].items():
         if key.startswith("backbone."):
-            weights[key[len("backbone."):]] = value
+            key = key[len("backbone."):]
+            # GR2 campaign snapshots used an adapter named ``encoder.core``
+            # while the downstream EEGEncoder owns that module directly as
+            # ``encoder``.  This is a namespace-only compatibility mapping;
+            # strict loading below still verifies every tensor and shape.
+            if key.startswith("encoder.core."):
+                key = "encoder." + key[len("encoder.core."):]
+            weights[key] = value
     backbone.load_state_dict(weights, strict=True)
     spec = get_dataset_spec(config["data"]["dataset"])
     patches = spec.signal_length // pretrain["patch_encoder"]["patch_samples"]
