@@ -45,7 +45,7 @@ def main():
             output = experiment / "downstream" / dataset / ("seed-%d" % seed)
             if readable_result(output / "result.json"):
                 continue
-            template = source / "configs/downstream/%s_%s_seed%d.yaml" % (TEMPLATE_PREFIX.get(dataset, "gr9-1"), dataset, seed)
+            template = source / ("configs/downstream/%s_%s_seed%d.yaml" % (TEMPLATE_PREFIX.get(dataset, "gr9-1"), dataset, seed))
             config = yaml.safe_load(template.read_text())
             if warmup(config): raise ValueError("downstream warmup is forbidden: " + str(template))
             config["model"]["checkpoint"] = str(checkpoint); config["runtime"]["output"] = str(output); config["data"]["num_workers"] = 2
