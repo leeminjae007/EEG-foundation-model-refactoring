@@ -1,5 +1,6 @@
 """Submit only failed/missing downstream seeds for a completed experiment."""
 import argparse
+import importlib.util
 import json
 from pathlib import Path
 import shutil
@@ -13,6 +14,17 @@ from submit_experiment_downstream import DATASETS, SEEDS, TEMPLATE_PREFIX, warmu
 ROOT = Path(__file__).resolve().parents[1]
 
 
+def require_submission_runtime():
+    """Fail before sbatch when the launcher is not the project environment."""
+    missing = [name for name in ("torch", "lmdb", "yaml") if importlib.util.find_spec(name) is None]
+    if missing:
+        raise RuntimeError(
+            "The submitting Python lacks required packages (%s). "
+            "Activate eeg-foundation-model-cu118, or invoke this script with "
+            "conda run -n eeg-foundation-model-cu118 python." % ", ".join(missing)
+        )
+
+
 def readable_result(path):
     try:
         json.loads(path.read_text(encoding="utf-8"))
@@ -22,6 +34,7 @@ def readable_result(path):
 
 
 def main():
+    require_submission_runtime()
     parser = argparse.ArgumentParser()
     parser.add_argument("--experiment", required=True, type=Path)
     parser.add_argument("--checkpoint", required=True, type=Path)
