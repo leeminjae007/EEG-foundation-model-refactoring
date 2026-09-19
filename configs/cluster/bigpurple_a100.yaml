@@ -18,8 +18,10 @@ slurm:
     - a100-4024
     - a100-4029
     - a100-4033
+    - a100-4034
     - a100-4037
     - a100-4042
+    - a100-4045
     auto_resume: false
   downstream:
     partitions: a100_dev,a100_short,a100_long
