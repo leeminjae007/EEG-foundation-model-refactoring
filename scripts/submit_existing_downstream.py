@@ -31,7 +31,13 @@ def main():
     if not (experiment / "manifest.json").is_file() or not checkpoint.is_file():
         raise FileNotFoundError("existing experiment manifest and verified checkpoint are required")
     # Never collide with an existing array writing these same seed folders.
-    active = subprocess.run(["squeue", "-h", "-n", experiment.name + "-ds", "-o", "%i"], text=True, stdout=subprocess.PIPE, check=True).stdout.strip()
+    active_names = [experiment.name + "-ds", experiment.name + "-repair-ds"]
+    active = subprocess.run(
+        ["squeue", "-h", "-n", ",".join(active_names), "-o", "%i"],
+        text=True,
+        stdout=subprocess.PIPE,
+        check=True,
+    ).stdout.strip()
     if active:
         raise RuntimeError("an existing downstream array is still active; wait for it to finish before repair submission: " + active)
     repair = experiment / "downstream_repair"; source = repair / "source"
