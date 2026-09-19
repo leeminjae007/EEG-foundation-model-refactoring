@@ -17,6 +17,20 @@ def encoder_state(checkpoint):
     return state
 
 
+def gate_mode(checkpoint):
+    """Resolve gate mode for either a pretrain or downstream checkpoint."""
+    encoder = checkpoint.get("config", {}).get("encoder")
+    if encoder is not None:
+        return encoder.get("fusion_gate", "static_feature")
+    # Finetune configs intentionally contain only task-specific settings; their
+    # model.checkpoint points to the pretrain artifact that defines the encoder.
+    pretrain_path = checkpoint.get("config", {}).get("model", {}).get("checkpoint")
+    if not pretrain_path:
+        raise ValueError("checkpoint has no encoder config or pretrain checkpoint reference")
+    pretrain = torch.load(pretrain_path, map_location="cpu")
+    return pretrain["config"]["encoder"].get("fusion_gate", "static_feature")
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--checkpoint", required=True, type=Path)
@@ -27,7 +41,7 @@ def main():
     saved = torch.load(args.checkpoint, map_location="cpu")
     state = encoder_state(saved)
     args.output_dir.mkdir(parents=True, exist_ok=True)
-    mode = saved["config"]["encoder"].get("fusion_gate", "static_feature")
+    mode = gate_mode(saved)
     report = {"checkpoint": str(args.checkpoint), "mode": mode, "artifacts": []}
     if mode == "static_feature":
         gates = state["encoder.fusion_gates"].sigmoid().numpy()
