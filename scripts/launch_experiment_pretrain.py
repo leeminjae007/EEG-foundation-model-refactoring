@@ -15,7 +15,7 @@ parser.add_argument("experiment_name")
 parser.add_argument("--config", default="configs/pretrain_gr2_geometry.yaml")
 parser.add_argument(
     "--preset",
-    choices=("gr2-mjde-d4-geometry", "gr2-d2-static", "gr2-d2-patch-scalar", "gr2-d2-patch-dimension"),
+    choices=("gr2-mjde-d4-geometry", "gr2-d2-static", "gr2-d2-patch-scalar", "gr2-d2-patch-dimension", "gr2-d2-patch-dimension-mask60"),
     help="Named, reproducible GR2 experiment profile. If omitted, a matching experiment name selects it.",
 )
 parser.add_argument("--results-root")
@@ -53,6 +53,7 @@ PRESETS = {
     "gr2-d2-static": "gr2-d2-static",
     "gr2-d2-patch-scalar": "gr2-d2-patch-scalar",
     "gr2-d2-patch-dimension": "gr2-d2-patch-dimension",
+    "gr2-d2-patch-dimension-mask60": "gr2-d2-patch-dimension-mask60",
 }
 preset = args.preset or PRESETS.get(args.experiment_name)
 
