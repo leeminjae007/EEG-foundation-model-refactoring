@@ -55,5 +55,5 @@ if __name__ == "__main__":
     for name in ("configs", "pretrain/checkpoints", "pretrain/logs", "pretrain/cache", "pretrain/tmp", "downstream"):
         (folder / name).mkdir(parents=True, exist_ok=True)
     commit = subprocess.check_output(["git", "-C", str(ROOT), "rev-parse", "HEAD"], text=True).strip()
-    (folder / "manifest.json").write_text(json.dumps({"experiment": args.experiment_name, "created_at_new_york": stamp, "source_commit": commit, "status": "prepared"}, indent=2) + "\n", encoding="utf-8")
+    (folder / "manifest.json").write_text(json.dumps({"experiment": args.experiment_name, "created_at_new_york": stamp, "source_commit": commit, "publication_root": str(ROOT / "outputs/results"), "status": "prepared"}, indent=2) + "\n", encoding="utf-8")
     print(folder)

@@ -45,7 +45,10 @@ def submit(folder, manifest, kind, indices=None):
     else:
         index = indices[0]
         entry = manifest["pretrain_entries"][index]
-        resources = (["--nodes=1-4", "--ntasks=4", "--gpus-per-task=a100:1",
+        gpu = manifest.get("smoke_gpu", "a100")
+        if gpu != "a100" and not manifest.get("smoke_seconds"):
+            raise ValueError("Alternate GPU type is allowed only for diagnostic smoke")
+        resources = (["--nodes=1-4", "--ntasks=4", "--gpus-per-task=" + gpu + ":1",
                       "--cpus-per-task=4", "--mem-per-gpu=32G"]
                      if manifest.get("pretrain_launcher") == "slurm_flexible" else
                      ["--nodes=1", "--ntasks=1", "--gres=gpu:a100:4", "--cpus-per-task=16", "--mem=128G"])
@@ -136,7 +139,7 @@ def worker(folder, manifest):
         os.environ.update(MASTER_ADDR=hosts[0], MASTER_PORT=str(15000 + int(os.environ["SLURM_JOB_ID"]) % 40000),
                           SLURM_EXPORT_ENV="ALL", NCCL_ASYNC_ERROR_HANDLING="1")
         cmd = ["srun", "--nodes=" + os.environ["SLURM_JOB_NUM_NODES"], "--ntasks=4",
-               "--gpus-per-task=a100:1", "--gpu-bind=single:1", "--distribution=block",
+               "--gpus-per-task=" + manifest.get("smoke_gpu", "a100") + ":1", "--gpu-bind=single:1", "--distribution=block",
                "--kill-on-bad-exit=1", "--export=ALL", manifest["python"], str(Path(__file__).resolve()),
                "rank-worker", "--folder", str(folder)]
     else:
@@ -151,6 +154,11 @@ def worker(folder, manifest):
     out = Path(e["result_dir"])
     out.mkdir(parents=True, exist_ok=True)
     shutil.copy2(e["config"], out / "campaign_config.yaml")
+    if manifest.get("verify_before_success"):
+        subprocess.run(cmd, check=True)
+        subprocess.run([manifest["python"], str(Path(e["source"]) / "scripts/verify_experiment_pretrain.py"),
+                        "--experiment", str(folder)], check=True)
+        return
     os.execvp(cmd[0], cmd)
 
 def rank_environment(env):
@@ -218,6 +226,8 @@ def rank_worker(folder, manifest):
                           visible_gpu=os.environ["CUDA_VISIBLE_DEVICES"], cuda_probe="passed")), flush=True)
     cmd = [manifest["python"], "-m", "ablation.pretrain", "--config", e["config"],
            "--distributed", "--output", e["result_dir"]]
+    if manifest.get("smoke_seconds"):
+        cmd += ["--smoke-seconds", str(manifest["smoke_seconds"])]
     last = Path(e["result_dir"]) / "last.pth"
     if last.exists():
         cmd += ["--resume", str(last)]

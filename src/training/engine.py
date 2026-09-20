@@ -23,6 +23,7 @@ from src.training.metrics import metrics
 from src.training.runtime import ROOT, setup
 from src.training.scheduler import GroupCosineScheduler
 from src.training.pretrain_rng import initialize_pretrain_rng, pretrain_rng_mode, pretrain_rng_report
+from src.training.smoke import TimedSmoke, LimitedLoader
 
 
 def autocast(device):
@@ -52,6 +53,9 @@ def run_pretrain(config, args):
                                not config["runtime"]["deterministic"], False)
     data = config["data"]
     optimization = config["optimization"]
+    smoke_seconds = getattr(args, "smoke_seconds", 0)
+    partial_smoke = args.smoke or bool(smoke_seconds)
+    timer = TimedSmoke(smoke_seconds, device, world)
     if "warmup_epochs" in optimization or "warmup_ratio" in optimization:
         raise ValueError("Downstream warmup is not supported; remove the warmup setting")
     output = ROOT / config["runtime"]["output"]
@@ -98,6 +102,7 @@ def run_pretrain(config, args):
     rng_report.update(start_epoch=start, start_step=step)
     (output / ("rng-start-" + os.environ.get("SLURM_JOB_ID", "local") + "-rank" + str(rank) + ".json")).write_text(
         json.dumps(rng_report, indent=2))
+    timer.start()
     for epoch in range(start, optimization["epochs"]):
         sampler.set_epoch(epoch)
         loader.generator.manual_seed(config["seed"] + epoch)
@@ -150,20 +155,29 @@ def run_pretrain(config, args):
                     append_record(output / "metrics.jsonl", {"epoch": epoch + 1, "step": step,
                                   "loss": float(loss), "lr_used": learning_rate, "pre_clip_norm": float(norm),
                                   "clipped": float(norm) > optimization["gradient_clip_norm"], **details})
-                if args.smoke:
+                if args.smoke or timer.finished():
                     break
         states = collect_rng(device, world)
+        if smoke_seconds:
+            import resource
+            import time
+            smoke_resources = dict(elapsed_seconds=time.monotonic() - timer.started, rank=rank, steps=step,
+                gpu_peak_allocated_bytes=torch.cuda.max_memory_allocated(device) if device.type == "cuda" else 0,
+                gpu_peak_reserved_bytes=torch.cuda.max_memory_reserved(device) if device.type == "cuda" else 0,
+                process_max_rss_kib=resource.getrusage(resource.RUSAGE_SELF).ru_maxrss,
+                children_max_rss_kib=resource.getrusage(resource.RUSAGE_CHILDREN).ru_maxrss)
+            (output / ("smoke-resources-rank%d.json" % rank)).write_text(json.dumps(smoke_resources, indent=2))
         if rank == 0:
             extra = {"step": step, "dataset_fingerprint": dataset.fingerprint,
-                     "partial_epoch_smoke": args.smoke}
+                     "partial_epoch_smoke": partial_smoke}
             save_checkpoint(output / "last.pth", model, optimizer, scheduler, epoch + 1, config, states, extra)
-            if (epoch + 1) % config["runtime"]["save_every_epochs"] == 0 and not args.smoke:
+            if (epoch + 1) % config["runtime"]["save_every_epochs"] == 0 and not partial_smoke:
                 path = output / f"checkpoint-epoch-{epoch + 1:04d}.pth"
                 save_checkpoint(path, model, optimizer, scheduler, epoch + 1, config, states, extra)
                 saved = sorted(output.glob("checkpoint-epoch-*.pth"))
                 for obsolete in saved[:-config["runtime"]["keep_last_checkpoints"]]:
                     obsolete.unlink()
-        if args.smoke:
+        if partial_smoke:
             break
     dataset.close()
     if args.distributed:
@@ -294,6 +308,8 @@ def run_finetune(config, args, policy=None):
     batch_size = optimization["batch_size_per_gpu"]
     workers = data["num_workers"]
     accumulation = optimization["gradient_accumulation_steps"]
+    smoke_batches = getattr(args, "smoke_batches", 0)
+    partial_smoke = args.smoke or bool(smoke_batches)
     if args.smoke:
         batch_size, workers, accumulation = 2, 0, 1
     datasets = {}
@@ -307,8 +323,15 @@ def run_finetune(config, args, policy=None):
         else:
             # 원본 ExactDistributedSampler와 같은 간격으로 평가 데이터를 나눈다.
             sampler = range(rank, len(datasets[split]), world)
+            if smoke_batches:
+                # Spread evaluation across the split instead of reading only
+                # the first subject/class. Diagnostic metrics are not results.
+                count = min(len(datasets[split]), smoke_batches * batch_size)
+                sampler = torch.linspace(0, len(datasets[split]) - 1, count).long().tolist()
         loaders[split] = DataLoader(datasets[split], batch_size=batch_size, sampler=sampler,
                                     num_workers=workers, pin_memory=True)
+        if smoke_batches and split == "train":
+            loaders[split] = LimitedLoader(loaders[split], smoke_batches * accumulation)
     model = build_finetune(config).to(device)
     if rank == 0:
         (output / "initialization.json").write_text(json.dumps(fingerprint(model), indent=2))
@@ -380,8 +403,8 @@ def run_finetune(config, args, policy=None):
         states = collect_rng(device, world)
         if rank == 0:
             save_checkpoint(output / "last.pth", model, optimizer, scheduler, epoch + 1, config, states,
-                            {"step": step, "best": best, "partial_epoch_smoke": args.smoke})
-        if args.smoke:
+                            {"step": step, "best": best, "partial_epoch_smoke": partial_smoke})
+        if partial_smoke:
             break
     if args.distributed:
         dist.barrier()
@@ -392,6 +415,7 @@ def run_finetune(config, args, policy=None):
             test = evaluate(model, loaders["test"], spec.task, data["dataset"], device, world)
             result[selector] = {"selection": best[selector], "test": test}
         if rank == 0:
-            (output / "result.json").write_text(json.dumps(result, indent=2))
+            filename = "smoke_result.json" if smoke_batches else "result.json"
+            (output / filename).write_text(json.dumps(result, indent=2))
     if args.distributed:
         dist.destroy_process_group()

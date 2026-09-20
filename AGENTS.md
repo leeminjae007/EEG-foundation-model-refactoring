@@ -15,5 +15,6 @@ When the user asks to run an experiment, treat monitoring and result publication
 - Preserve the five individual seed values in `seed_results.csv` for auditability.
 - If a job finishes without all expected artifacts, record the missing dataset/seeds and do not label the experiment complete.
 - The four GR2 campaigns `gr2-mjde-d4-geometry`, `gr2-d2-static`, `gr2-d2-patch-scalar`, and `gr2-d2-patch-dimension` are main-result candidates. Their downstream five-seed campaigns use A100.
+- The `gr2-d2-patch-dimension-mask60` main candidate also uses A100 for both production pretraining and downstream, per the user's explicit request. Its diagnostic smoke may use L40S.
 - For later ablation or comparison campaigns, pretraining uses `a100_short,a100_long`; downstream uses L40S. Route `tuab`, `chb`, and `tuev` to `gl40s_long`. Route `tusl`, `tusz`, `seedv`, `faced`, `mentalarithmetic`, `physionet_mi`, `isruc`, `hmc`, and `siena` to `gl40s_dev,gl40s_short`.
 - Keep per-dataset L40S downstream runtime measurements. Until five-seed observations exist, label any duration used for scheduling as an estimate rather than an empirical average.

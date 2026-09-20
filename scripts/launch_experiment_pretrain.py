@@ -1,12 +1,9 @@
 """Create an isolated experiment and immediately submit its A100 pretrain."""
 import argparse
 import importlib
-import json
 from pathlib import Path
-import shlex
 import subprocess
 import sys
-import yaml
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -69,37 +66,16 @@ if args.prepare_only:
     submit.append("--prepare-only")
 pretrain = subprocess.check_output(submit, text=True).strip()
 
-# Prepare downstream configs now.  For an actual launch, submit the complete
-# array held: the CPU verifier is the only process allowed to release it.
+# Arrays wait in Slurm; no CPU polling or held-job release service.
 downstream = [sys.executable, str(ROOT / "scripts/submit_experiment_downstream.py"),
-              "--experiment", str(experiment), "--hold"]
+              "--experiment", str(experiment)]
 if args.prepare_only:
-    downstream.append("--prepare-only")
-    subprocess.run(downstream, check=True)
+    subprocess.run(downstream + ["--prepare-only"], check=True)
     print(experiment)
     sys.exit(0)
-downstream_job = subprocess.check_output(downstream, text=True).strip().splitlines()[-1].split(";")[0]
-
-source = experiment / "source"
-cluster = yaml.safe_load((source / "configs/cluster/bigpurple_a100.yaml").read_text())["slurm"]
-logs = experiment / "monitor/logs"; logs.mkdir(parents=True, exist_ok=True)
-monitor_command = shlex.join([
-    sys.executable, str(source / "scripts/release_downstream_after_pretrain.py"),
-    "--experiment", str(experiment), "--downstream-job", downstream_job,
-])
-monitor_job = subprocess.check_output([
-    "sbatch", "--parsable", "--account=" + cluster["account"],
-    "--job-name=" + experiment.name + "-release-ds", "--partition=cpu_long",
-    "--nodes=1", "--ntasks=1", "--cpus-per-task=1", "--mem=4G", "--time=7-00:00:00",
-    "--output=" + str(logs / "%j.out"), "--error=" + str(logs / "%j.err"),
-    "--wrap=exec " + monitor_command,
-], text=True).strip().split(";")[0]
-manifest_path = experiment / "manifest.json"
-manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
-manifest.update({"pretrain_job": pretrain.splitlines()[-1].split(";")[0], "downstream_job": downstream_job,
-                 "downstream_state": "held", "downstream_release_monitor_job": monitor_job})
-manifest_path.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
-print(pretrain)
-print(downstream_job)
-print(monitor_job)
+pretrain_job = pretrain.splitlines()[-1].split(";")[0]
+subprocess.run(downstream + ["--dependency", pretrain_job], check=True)
+subprocess.run([sys.executable, str(ROOT / "scripts/finalize_experiment.py"),
+                "--experiment", str(experiment), "--submit"], check=True)
+print("pretrain=" + pretrain_job)
 print(experiment)

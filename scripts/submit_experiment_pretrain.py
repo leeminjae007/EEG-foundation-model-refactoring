@@ -44,6 +44,7 @@ def main():
     manifest.update(alias=experiment.name, monitor_interval_seconds=3600,
                     pretrain_excluded_nodes=sorted(set(manifest.get("pretrain_excluded_nodes", [])) | set(policy.get("excluded_nodes", []))))
     manifest["auto_resume"] = bool(policy.get("auto_resume", False))
+    manifest["verify_before_success"] = True
     entry["timeout_continuation"] = manifest["auto_resume"]
     worker = experiment / "worker.sh"; worker.write_text("#!/usr/bin/env bash\nset -euo pipefail\nexec " + sys.executable + " " + str(controller_file) + " worker --folder " + str(experiment) + "\n", encoding="utf-8"); worker.chmod(0o750)
     manifest_path.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")

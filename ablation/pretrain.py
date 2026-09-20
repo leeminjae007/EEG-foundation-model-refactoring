@@ -14,6 +14,8 @@ def main():
     parser.add_argument("--device", choices=("cpu", "cuda"), default="cuda")
     parser.add_argument("--distributed", action="store_true")
     parser.add_argument("--smoke", action="store_true", help="One update on real training data")
+    parser.add_argument("--smoke-seconds", type=int, default=0,
+                        help="Timed real-data smoke at configured batch size; writes partial checkpoint only")
     parser.add_argument("--resume")
     parser.add_argument("--data-dir")
     parser.add_argument("--output")
@@ -21,6 +23,8 @@ def main():
     parser.add_argument("--batch-size", type=int)
     parser.add_argument("--dry-run", action="store_true", help="Resolve config and count model parameters, no data/GPU required")
     args = parser.parse_args()
+    if args.smoke_seconds < 0 or (args.smoke_seconds and (args.smoke or args.resume)):
+        parser.error("--smoke-seconds must be positive and cannot be combined with --smoke/--resume")
 
     from src.training.runtime import set_paths
     set_paths()

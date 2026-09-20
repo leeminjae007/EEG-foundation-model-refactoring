@@ -1,0 +1,20 @@
+# Scheduling estimates, not five-seed measured averages.
+# Above four hours, only short is eligible within dev,short.
+gpu: l40s
+cpus_per_task: 2
+memory: 32G
+array_parallelism: 60
+excluded_nodes: []
+datasets:
+  chb: {partitions: gl40s_long, time: '24:00:00'}
+  siena: {partitions: 'gl40s_dev,gl40s_short', time: '04:00:00'}
+  physionet_mi: {partitions: 'gl40s_dev,gl40s_short', time: '04:00:00'}
+  tuev: {partitions: gl40s_long, time: '12:00:00'}
+  tuab: {partitions: gl40s_long, time: '12:00:00'}
+  faced: {partitions: 'gl40s_dev,gl40s_short', time: '12:00:00'}
+  seedv: {partitions: 'gl40s_dev,gl40s_short', time: '04:00:00'}
+  mentalarithmetic: {partitions: 'gl40s_dev,gl40s_short', time: '04:00:00'}
+  isruc: {partitions: 'gl40s_dev,gl40s_short', time: '12:00:00'}
+  hmc: {partitions: 'gl40s_dev,gl40s_short', time: '12:00:00'}
+  tusl: {partitions: 'gl40s_dev,gl40s_short', time: '04:00:00'}
+  tusz: {partitions: 'gl40s_dev,gl40s_short', time: '04:00:00'}
