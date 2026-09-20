@@ -22,6 +22,8 @@ def main():
     parser.add_argument("--dataset", choices=DATASETS, default="tusz")
     parser.add_argument("--seed", choices=SEEDS, type=int, default=42)
     parser.add_argument("--batches", type=int, default=4)
+    parser.add_argument("--smoke-root", type=Path,
+                        help="Writable isolated smoke directory; defaults below --experiment")
     args = parser.parse_args()
     if args.batches < 1:
         raise ValueError("--batches must be positive")
@@ -34,7 +36,7 @@ def main():
     if not (experiment / "manifest.json").is_file() or not checkpoint.is_file():
         raise FileNotFoundError("existing experiment manifest and checkpoint are required")
 
-    smoke = experiment / "downstream_smoke"
+    smoke = (args.smoke_root or experiment / "downstream_smoke").resolve()
     source = smoke / "source"
     if source.exists():
         shutil.rmtree(source)
