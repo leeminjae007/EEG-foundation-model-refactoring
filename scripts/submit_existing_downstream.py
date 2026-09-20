@@ -77,12 +77,11 @@ def main():
     default_policy = cluster["downstream"]
     logs = experiment / "downstream/logs"; logs.mkdir(parents=True, exist_ok=True)
     # TUAB approaches the four-hour budget, while the other downstream tasks
-    # do not.  Give repair seeds one extra hour on a100_short; this avoids
-    # reserving a long-partition allocation for work expected to finish near
-    # the current four-hour boundary.
+    # do not.  Give repair seeds one extra hour and allow either short or long
+    # A100 capacity, so Slurm can choose the first suitable allocation.
     groups = (("standard", [i for i, e in enumerate(entries) if e["dataset"] != "tuab"], dict(default_policy)),
               ("tuab", [i for i, e in enumerate(entries) if e["dataset"] == "tuab"],
-               dict(default_policy, partitions="a100_short", time="05:00:00")))
+               dict(default_policy, partitions="a100_short,a100_long", time="05:00:00")))
     submissions = []
     for label, indices, policy in groups:
         if not indices:
