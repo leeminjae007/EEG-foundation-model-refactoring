@@ -14,7 +14,6 @@ import os
 from pathlib import Path
 import re
 import shlex
-import shutil
 import subprocess
 import sys
 from zoneinfo import ZoneInfo
@@ -143,18 +142,24 @@ def prepare(source_campaign, output_root):
             raise ValueError('Expected a complete TUAB epoch-17/18/19/20 checkpoint')
         if not saved['optimizer']['state'] or not saved['scheduler'] or not saved['rng_states']:
             raise ValueError('Checkpoint lacks complete optimizer/scheduler/RNG state')
-        output = folder / 'downstream/tuab' / ('seed-' + str(entry['seed']))
-        output.mkdir(parents=True)
+        # Resume in place: the source campaign's downstream/tuab directory is
+        # the authoritative location for its checkpoints, logs, and result.json.
+        # The handoff folder holds only controller metadata/config snapshots.
+        output = old_output
+        if not output.is_dir():
+            raise ValueError('Missing original TUAB output directory: ' + str(output))
         file_hashes = {}
         for name in ['initialization.json', 'best-balanced_accuracy.pth', 'best-auroc.pth']:
-            shutil.copyfile(old_output / name, output / name)
-            file_hashes[name] = digest(old_output / name)
-            if file_hashes[name] != digest(output / name):
-                raise ValueError('Copied weight/fingerprint hash differs: ' + name)
+            path = old_output / name
+            if not path.is_file():
+                raise ValueError('Missing original TUAB artifact: ' + str(path))
+            file_hashes[name] = digest(path)
         discarded = {}
         for name in ['metrics.jsonl', 'validation.jsonl']:
             rows = [json.loads(line) for line in (old_output / name).read_text().splitlines()]
             kept = [r for r in rows if r['epoch'] <= saved['epoch'] and r.get('step', 0) <= saved['extra']['step']]
+            # Discard rows written after the last durable checkpoint before
+            # resuming, so the original log remains internally consistent.
             (output / name).write_text(''.join(json.dumps(r) + '\n' for r in kept))
             discarded[name] = len(rows) - len(kept)
         config['runtime']['output'] = str(output)
