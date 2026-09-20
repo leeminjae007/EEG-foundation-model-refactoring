@@ -73,14 +73,36 @@ def main():
     (experiment / "downstream_entries.json").write_text(json.dumps(entries, indent=2) + "\n")
     print("skipped complete seeds:", len(DATASETS) * len(SEEDS) - len(entries), "submitted candidates:", len(entries))
     if args.dry_run or not entries: return
-    cluster = yaml.safe_load((source / "configs/cluster/bigpurple_a100.yaml").read_text())["slurm"]; policy = cluster["downstream"]
+    cluster = yaml.safe_load((source / "configs/cluster/bigpurple_a100.yaml").read_text())["slurm"]
+    default_policy = cluster["downstream"]
     logs = experiment / "downstream/logs"; logs.mkdir(parents=True, exist_ok=True)
-    command = ["sbatch", "--parsable", "--account=" + (args.account or cluster["account"]), "--job-name=" + experiment.name + "-repair-ds", "--partition=" + policy["partitions"], "--nodes=1", "--ntasks=1", "--gpus-per-task=" + policy["gpu"] + ":1", "--cpus-per-task=" + str(policy["cpus_per_task"]), "--mem=" + policy["memory"], "--time=" + policy["time"], "--array=0-%d%%%d" % (len(entries)-1, policy["array_parallelism"]), "--output=" + str(logs / "repair_%A_%a.out"), "--error=" + str(logs / "repair_%A_%a.err"), "--wrap=exec " + sys.executable + " " + str(source / "scripts/downstream_experiment_worker.py") + " --experiment " + str(experiment) + " --source " + str(source)]
-    excluded = sorted(set(cluster["pretrain"].get("excluded_nodes", [])) | set(policy.get("excluded_nodes", [])))
-    if excluded: command.append("--exclude=" + ",".join(excluded))
-    job = subprocess.check_output(command, text=True).strip().split(";")[0]
-    (repair / "submission.json").write_text(json.dumps({"job": job, "checkpoint": str(checkpoint), "entries": entries}, indent=2) + "\n")
-    print(job)
+    # TUAB approaches the four-hour budget, while the other downstream tasks
+    # do not.  Give repair seeds one extra hour on a100_short; this avoids
+    # reserving a long-partition allocation for work expected to finish near
+    # the current four-hour boundary.
+    groups = (("standard", [i for i, e in enumerate(entries) if e["dataset"] != "tuab"], dict(default_policy)),
+              ("tuab", [i for i, e in enumerate(entries) if e["dataset"] == "tuab"],
+               dict(default_policy, partitions="a100_short", time="05:00:00")))
+    submissions = []
+    for label, indices, policy in groups:
+        if not indices:
+            continue
+        command = ["sbatch", "--parsable", "--account=" + (args.account or cluster["account"]),
+                   "--job-name=" + experiment.name + "-repair-" + label,
+                   "--partition=" + policy["partitions"], "--nodes=1", "--ntasks=1",
+                   "--gpus-per-task=" + policy["gpu"] + ":1", "--cpus-per-task=" + str(policy["cpus_per_task"]),
+                   "--mem=" + policy["memory"], "--time=" + policy["time"],
+                   "--array=" + ",".join(map(str, indices)) + "%" + str(policy["array_parallelism"]),
+                   "--output=" + str(logs / ("repair_" + label + "_%A_%a.out")),
+                   "--error=" + str(logs / ("repair_" + label + "_%A_%a.err")),
+                   "--wrap=exec " + sys.executable + " " + str(source / "scripts/downstream_experiment_worker.py") + " --experiment " + str(experiment) + " --source " + str(source)]
+        excluded = sorted(set(cluster["pretrain"].get("excluded_nodes", [])) | set(policy.get("excluded_nodes", [])))
+        if excluded:
+            command.append("--exclude=" + ",".join(excluded))
+        job = subprocess.check_output(command, text=True).strip().split(";")[0]
+        submissions.append({"job": job, "group": label, "indices": indices, "resources": policy})
+        print(job, label)
+    (repair / "submission.json").write_text(json.dumps({"jobs": submissions, "checkpoint": str(checkpoint), "entries": entries}, indent=2) + "\n")
 
 
 if __name__ == "__main__": main()
