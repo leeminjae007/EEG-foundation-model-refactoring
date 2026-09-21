@@ -1,10 +1,12 @@
 #!/usr/bin/env bash
 # Submit one arm or a group from the SSH login node, with four GPUs in 1-4 nodes.
-# Usage: bash ablation/scripts/run_pretrain.sh [--replace-pending] ARM_OR_GROUP [SEED] [TRAIN_ARGS...]
+# Usage: bash ablation/scripts/run_pretrain.sh [--replace-pending] [--pretrain-only] ARM_OR_GROUP [SEED] [TRAIN_ARGS...]
 set -euo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/../.."
 replace_pending=0
+pretrain_only=0
 if [[ "${1:-}" == --replace-pending ]]; then replace_pending=1; shift; fi
+if [[ "${1:-}" == --pretrain-only ]]; then pretrain_only=1; shift; fi
 group="${1:-encoder}"
 seed="${2:-42}"
 if (( $# >= 2 )); then shift 2; else shift "$#"; fi
@@ -69,7 +71,7 @@ for arm in "${arms[@]}"; do
     continue
   fi
   log_args=()
-  if [[ -n "$output_dir" ]]; then
+  if [[ -n "$output_dir" && "$pretrain_only" == 0 ]]; then
     mkdir -p "$output_dir/logs"
     log_args=("--output=$output_dir/logs/%x-%j.out" "--error=$output_dir/logs/%x-%j.err")
   else
