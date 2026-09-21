@@ -13,7 +13,7 @@ DATASETS = ('chb', 'siena', 'physionet_mi', 'tuev', 'tuab', 'faced', 'seedv',
             'mentalarithmetic', 'isruc', 'hmc', 'tusl', 'tusz')
 TEMPLATE_PREFIX = {'tusz': 'nearest3_7', 'tusl': 'nearest3_7'}
 MAIN_A100 = {'gr2-mjde-d4-geometry', 'gr2-d2-static', 'gr2-d2-patch-scalar', 'gr2-d2-patch-dimension',
-             'gr2-d2-patch-dimension-mask60'}
+             'gr2-d2-patch-dimension-mask60', 'gr2-d4-patch-dimension-mask60'}
 
 
 def warmup(value):
