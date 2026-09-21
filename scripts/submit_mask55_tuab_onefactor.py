@@ -127,6 +127,50 @@ def submit(campaign):
     print(json.dumps(dict(campaign=str(campaign), job=job, finalizer=finalizer), indent=2))
 
 
+def retry_failed(campaign, indices, excluded_nodes):
+    """Retry only terminal failures, leaving active and completed entries untouched."""
+    manifest_path = campaign / 'manifest.json'
+    manifest = json.loads(manifest_path.read_text())
+    if len(manifest['jobs']) != 1 or manifest.get('retry_job'):
+        raise ValueError('Expected one original array and no existing retry')
+    original = manifest['jobs'][0]['job']
+    entries = json.loads((campaign / 'downstream_entries.json').read_text())
+    if not indices or len(indices) != len(set(indices)) or not set(indices) < set(range(len(entries))):
+        raise ValueError('Invalid retry indices')
+    if not excluded_nodes:
+        raise ValueError('GPU-failing nodes must be excluded')
+    for index in indices:
+        state = subprocess.check_output(['sacct', '-X', '-n', '-j', f'{original}_{index}',
+                                         '--format=State'], text=True).strip()
+        if state != 'FAILED':
+            raise ValueError(f'Index {index} is not a terminal failure: {state!r}')
+        output = Path(entries[index]['output'])
+        if (output / 'result.json').exists() or list(output.glob('*.pth')):
+            raise ValueError(f'Index {index} has training output and needs individual review')
+    command = list(manifest['jobs'][0]['command'])
+    command[command.index('--array=0-11%5')] = '--array=' + ','.join(map(str, indices)) + '%5'
+    command.insert(-1, '--exclude=' + ','.join(excluded_nodes))
+    retry = subprocess.check_output(command, text=True).strip().split(';', 1)[0]
+    manifest.update(retry_job=retry, retry_indices=indices, retry_excluded_nodes=excluded_nodes)
+    write_json(manifest_path, manifest)
+    subprocess.run(['scancel', manifest['finalizer_job']], check=True)
+    logs = campaign / 'logs'
+    finalizer = subprocess.check_output([
+        'sbatch', '--parsable', '--account=system', '--job-name=mask55-tuab-onefactor-results',
+        '--partition=cpu_short,cpu_long', '--nodes=1', '--ntasks=1', '--cpus-per-task=1',
+        '--mem=4G', '--time=00:30:00', '--dependency=afterany:' + original + ':' + retry,
+        '--output=' + str(logs / 'aggregate-%j.out'),
+        '--error=' + str(logs / 'aggregate-%j.err'),
+        '--wrap=exec ' + shlex.join([
+            manifest['python'], str(campaign / 'source/scripts/submit_mask55_tuab_onefactor.py'),
+            'aggregate', '--campaign', str(campaign)])
+    ], text=True).strip().split(';', 1)[0]
+    manifest.update(finalizer_job=finalizer, status='retry_submitted')
+    write_json(manifest_path, manifest)
+    print(json.dumps(dict(retry_job=retry, retry_indices=indices,
+                          excluded_nodes=excluded_nodes, finalizer_job=finalizer), indent=2))
+
+
 def aggregate(campaign):
     entries = json.loads((campaign / 'downstream_entries.json').read_text())
     rows, missing = [], []
@@ -162,11 +206,18 @@ def aggregate(campaign):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('action', choices=('prepare', 'submit', 'launch', 'aggregate'))
+    parser.add_argument('action', choices=('prepare', 'submit', 'launch', 'aggregate', 'retry-failed'))
     parser.add_argument('--output-root', type=Path,
                         default=Path('/gpfs/data/oermannlab/users/ml10266/workspace/eegfm/results'))
     parser.add_argument('--campaign', type=Path)
+    parser.add_argument('--indices', type=int, nargs='+')
+    parser.add_argument('--exclude', nargs='+')
     args = parser.parse_args()
+    if args.action == 'retry-failed':
+        if args.campaign is None or not args.indices or not args.exclude:
+            parser.error('retry-failed requires --campaign, --indices and --exclude')
+        retry_failed(args.campaign.resolve(), args.indices, args.exclude)
+        return 0
     if args.action == 'aggregate':
         if args.campaign is None:
             parser.error('aggregate requires --campaign')
