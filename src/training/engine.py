@@ -187,7 +187,14 @@ def run_pretrain(config, args):
 def build_finetune(config):
     checkpoint = torch.load(ROOT / config["model"]["checkpoint"], map_location="cpu")
     pretrain = checkpoint["config"]
-    backbone = EEGEncoder(pretrain)
+    # Raw encoder/PE ablations store an ablation wrapper in their checkpoint.
+    # Recreate that exact backbone before strict loading; constructing the
+    # default EEGEncoder would silently change the number of MJDE stages.
+    if "ablation" in pretrain:
+        from ablation.models import build_backbone
+        backbone = build_backbone(pretrain)
+    else:
+        backbone = EEGEncoder(pretrain)
     weights = {}
     for key, value in checkpoint["model"].items():
         if key.startswith("backbone."):
