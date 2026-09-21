@@ -188,6 +188,10 @@ def prepare(results_root):
                             config=str(config_path), config_sha256=entry["config_sha256"],
                             fusion_gate_applicability=config["ablation"]["fusion_gate_applicability"],
                             collaboration_access=access_mode))
+    # Each account writes only its own submission receipt here. The nested
+    # arm folders already contain that same account's three assigned runs.
+    for account in ASSIGNMENTS:
+        (campaign / "accounts" / account).chmod(0o777)
     write_json(campaign / "manifest.json", dict(
         experiment=campaign.name, owner=OWNER, source_commit=commit, source=str(source),
         launcher_sha256=launcher_sha, assignments={key: [row[0] for row in value] for key, value in ASSIGNMENTS.items()},
