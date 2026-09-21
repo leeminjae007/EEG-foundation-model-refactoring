@@ -84,7 +84,7 @@ for arm in "${arms[@]}"; do
     continue
   fi
   log_args=()
-  if [[ -n "$output_dir" && "$pretrain_only" == 0 ]]; then
+  if [[ -n "$output_dir" ]]; then
     mkdir -p "$output_dir/logs"
     log_args=("--output=$output_dir/logs/%x-%j.out" "--error=$output_dir/logs/%x-%j.err")
   else
@@ -94,7 +94,7 @@ for arm in "${arms[@]}"; do
     ablation/scripts/pretrain_flexible.slurm "$arm" "$seed" "$@")"
   pretrain_job="${pretrain_job%%;*}"
   echo "Submitted pretrain $pretrain_job ($job_name)"
-  if [[ -n "$output_dir" ]]; then
+  if [[ -n "$output_dir" && "$pretrain_only" == 0 ]]; then
     experiment_dir="$(dirname "$output_dir")"
     checkpoint="$output_dir/checkpoint-epoch-0040.pth"
     python - "$experiment_dir" "$arm" "$pretrain_job" <<'PY'
