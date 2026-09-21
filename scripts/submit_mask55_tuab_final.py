@@ -12,9 +12,10 @@ from zoneinfo import ZoneInfo
 
 import yaml
 
+ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT))
 from scripts.submit_mask55_hp_grid import digest, write_json
 
-ROOT = Path(__file__).resolve().parents[1]
 BASE = Path("/gpfs/data/oermannlab/users/ml10266/workspace/eegfm/results/260920-0342-gr2-d2-patch-dimension-mask55")
 SEEDS = (42, 696, 1001, 1234, 3407)
 
