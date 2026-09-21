@@ -1,12 +1,21 @@
 #!/usr/bin/env bash
 # Submit one arm or a group from the SSH login node, with four GPUs in 1-4 nodes.
-# Usage: bash ablation/scripts/run_pretrain.sh [--replace-pending] [--pretrain-only] ARM_OR_GROUP [SEED] [TRAIN_ARGS...]
+# Usage: bash ablation/scripts/run_pretrain.sh [--replace-pending] [--pretrain-only] [--afterok JOBID] ARM_OR_GROUP [SEED] [TRAIN_ARGS...]
 set -euo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/../.."
 replace_pending=0
 pretrain_only=0
-if [[ "${1:-}" == --replace-pending ]]; then replace_pending=1; shift; fi
-if [[ "${1:-}" == --pretrain-only ]]; then pretrain_only=1; shift; fi
+afterok_job=""
+while :; do
+  case "${1:-}" in
+    --replace-pending) replace_pending=1; shift ;;
+    --pretrain-only) pretrain_only=1; shift ;;
+    --afterok)
+      [[ "${2:-}" =~ ^[0-9]+$ ]] || { echo "--afterok requires a numeric job ID" >&2; exit 2; }
+      afterok_job="$2"; shift 2 ;;
+    *) break ;;
+  esac
+done
 group="${1:-encoder}"
 seed="${2:-42}"
 if (( $# >= 2 )); then shift 2; else shift "$#"; fi
@@ -33,6 +42,10 @@ PY
 exclude_args=()
 if [[ -n "$excluded_nodes_csv" ]]; then
   exclude_args=("--exclude=$excluded_nodes_csv")
+fi
+dependency_args=()
+if [[ -n "$afterok_job" ]]; then
+  dependency_args=("--dependency=afterok:$afterok_job" "--kill-on-invalid-dep=yes")
 fi
 
 # A collaborator may execute this shared checkout without write access to the
@@ -77,7 +90,7 @@ for arm in "${arms[@]}"; do
   else
     mkdir -p logs/ablation
   fi
-  pretrain_job="$(sbatch --parsable --job-name="$job_name" --chdir="$PWD" "${exclude_args[@]}" "${log_args[@]}" \
+  pretrain_job="$(sbatch --parsable --job-name="$job_name" --chdir="$PWD" "${exclude_args[@]}" "${dependency_args[@]}" "${log_args[@]}" \
     ablation/scripts/pretrain_flexible.slurm "$arm" "$seed" "$@")"
   pretrain_job="${pretrain_job%%;*}"
   echo "Submitted pretrain $pretrain_job ($job_name)"
