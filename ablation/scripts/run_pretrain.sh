@@ -75,6 +75,27 @@ for arm in "${arms[@]}"; do
   else
     mkdir -p logs/ablation
   fi
-  sbatch --job-name="$job_name" --chdir="$PWD" "${exclude_args[@]}" "${log_args[@]}" \
-    ablation/scripts/pretrain_flexible.slurm "$arm" "$seed" "$@"
+  pretrain_job="$(sbatch --parsable --job-name="$job_name" --chdir="$PWD" "${exclude_args[@]}" "${log_args[@]}" \
+    ablation/scripts/pretrain_flexible.slurm "$arm" "$seed" "$@")"
+  pretrain_job="${pretrain_job%%;*}"
+  echo "Submitted pretrain $pretrain_job ($job_name)"
+  if [[ -n "$output_dir" ]]; then
+    experiment_dir="$(dirname "$output_dir")"
+    checkpoint="$output_dir/checkpoint-epoch-0040.pth"
+    python - "$experiment_dir" "$arm" "$pretrain_job" <<'PY'
+import json
+from pathlib import Path
+import sys
+root = Path(sys.argv[1]); root.mkdir(parents=True, exist_ok=True)
+path = root / "manifest.json"
+if not path.exists():
+    path.write_text(json.dumps({"ablation_arm": sys.argv[2], "pretrain_job": sys.argv[3]}, indent=2) + "\n")
+PY
+    callback="$(sbatch --parsable --account=system --job-name="${job_name}-downstream-dispatch" \
+      --partition=cpu_short,cpu_long --nodes=1 --ntasks=1 --cpus-per-task=1 --mem=4G --time=01:00:00 \
+      --dependency="afterok:$pretrain_job" --kill-on-invalid-dep=yes --chdir="$PWD" \
+      --output="$experiment_dir/downstream-dispatch-%j.out" --error="$experiment_dir/downstream-dispatch-%j.err" \
+      --wrap="exec $(command -v python) scripts/submit_existing_downstream.py --experiment $experiment_dir --checkpoint $checkpoint --l40s")"
+    echo "Submitted downstream dispatcher ${callback%%;*} (afterok:$pretrain_job)"
+  fi
 done

@@ -39,6 +39,7 @@ def main():
     parser.add_argument("--experiment", required=True, type=Path)
     parser.add_argument("--checkpoint", required=True, type=Path)
     parser.add_argument("--account", default=None)
+    parser.add_argument("--l40s", action="store_true", help="Use the ablation L40S per-dataset policy")
     parser.add_argument("--dry-run", action="store_true")
     args = parser.parse_args(); experiment = args.experiment.resolve(); checkpoint = args.checkpoint.resolve()
     if not (experiment / "manifest.json").is_file() or not checkpoint.is_file():
@@ -79,9 +80,15 @@ def main():
     # TUAB approaches the four-hour budget, while the other downstream tasks
     # do not.  Give repair seeds one extra hour and allow either short or long
     # A100 capacity, so Slurm can choose the first suitable allocation.
-    groups = (("standard", [i for i, e in enumerate(entries) if e["dataset"] != "tuab"], dict(default_policy)),
-              ("tuab", [i for i, e in enumerate(entries) if e["dataset"] == "tuab"],
-               dict(default_policy, partitions="a100_short,a100_long", time="05:00:00")))
+    if args.l40s:
+        l40s = yaml.safe_load((source / "configs/cluster/downstream_l40s.yaml").read_text())
+        groups = [(dataset, [i for i, e in enumerate(entries) if e["dataset"] == dataset],
+                   dict({k: v for k, v in l40s.items() if k != "datasets"}, **l40s["datasets"][dataset]))
+                  for dataset in DATASETS]
+    else:
+        groups = (("standard", [i for i, e in enumerate(entries) if e["dataset"] != "tuab"], dict(default_policy)),
+                  ("tuab", [i for i, e in enumerate(entries) if e["dataset"] == "tuab"],
+                   dict(default_policy, partitions="a100_short,a100_long", time="05:00:00")))
     submissions = []
     for label, indices, policy in groups:
         if not indices:
@@ -95,7 +102,8 @@ def main():
                    "--output=" + str(logs / ("repair_" + label + "_%A_%a.out")),
                    "--error=" + str(logs / ("repair_" + label + "_%A_%a.err")),
                    "--wrap=exec " + sys.executable + " " + str(source / "scripts/downstream_experiment_worker.py") + " --experiment " + str(experiment) + " --source " + str(source)]
-        excluded = sorted(set(cluster["pretrain"].get("excluded_nodes", [])) | set(policy.get("excluded_nodes", [])))
+        excluded = sorted(set(policy.get("excluded_nodes", [])) if args.l40s else
+                          (set(cluster["pretrain"].get("excluded_nodes", [])) | set(policy.get("excluded_nodes", []))))
         if excluded:
             command.append("--exclude=" + ",".join(excluded))
         job = subprocess.check_output(command, text=True).strip().split(";")[0]
