@@ -13,6 +13,7 @@ from torch.utils.data import DataLoader, DistributedSampler
 
 from src.data.datasets.pretraining_dataset import make_pretraining_loader
 from src.data.datasets.registry import get_dataset_spec
+from src.training.early_stopping import ValidationEarlyStopper
 from src.model import EEGEncoder, FinetuneModel, PretrainModel, SleepModel
 from src.modules.loss import downstream_loss, reconstruction_loss
 from src.modules.masking import gather_targets, make_masks
@@ -385,9 +386,15 @@ def run_finetune(config, args, policy=None):
     for name in selectors:
         best[name] = {"score": -float("inf"), "epoch": 0}
     start, step = 0, 0
+    early_stopper = None
+    if optimization.get('early_stopping') is not None:
+        early_stopper = ValidationEarlyStopper(optimization['early_stopping'])
     if args.resume:
         start, extra = load_checkpoint(ROOT / args.resume, model, optimizer, scheduler, device, rank)
         step, best = extra["step"], extra["best"]
+        if early_stopper is not None:
+            early_stopper = ValidationEarlyStopper(
+                optimization['early_stopping'], extra.get('early_stopping'))
     trainer = model
     if args.distributed:
         trainer = DistributedDataParallel(model, device_ids=[device.index],
@@ -424,6 +431,7 @@ def run_finetune(config, args, policy=None):
                                   **details})
                 if args.smoke:
                     break
+        stop_now = False
         if not args.smoke:
             validation = evaluate(model, loaders["val"], spec.task, data["dataset"], device, world)
             if rank == 0:
@@ -434,16 +442,22 @@ def run_finetune(config, args, policy=None):
                     best[selector] = {"score": score, "epoch": epoch + 1}
                     if rank == 0:
                         torch.save(model.state_dict(), output / ("best-" + selector + ".pth"))
+            if early_stopper is not None:
+                stop_now = early_stopper.step(epoch + 1, validation['balanced_accuracy'])
         states = collect_rng(device, world)
         if rank == 0:
             save_checkpoint(output / "last.pth", model, optimizer, scheduler, epoch + 1, config, states,
-                            {"step": step, "best": best, "partial_epoch_smoke": partial_smoke})
-        if partial_smoke:
+                            {"step": step, "best": best, "partial_epoch_smoke": partial_smoke,
+                             "early_stopping": early_stopper.state() if early_stopper else None,
+                             "early_stopped": stop_now})
+        if partial_smoke or stop_now:
             break
     if args.distributed:
         dist.barrier()
     if not args.smoke:
-        result = {}
+        result = {"_training": {"epochs_completed": epoch + 1,
+                               "early_stopped": bool(stop_now),
+                               "early_stopping": optimization.get('early_stopping')}}
         for selector in selectors:
             model.load_state_dict(torch.load(output / ("best-" + selector + ".pth"), map_location=device), strict=True)
             test = evaluate(model, loaders["test"], spec.task, data["dataset"], device, world)

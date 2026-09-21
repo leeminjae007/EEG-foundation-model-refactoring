@@ -44,6 +44,8 @@ def make_config(base, hp, checkpoint, output):
     for key in ("tokenizer_learning_rate", "encoder_learning_rate", "head_learning_rate"):
         optimization[key] = hp["learning_rate"]
     optimization["weight_decay"] = hp["weight_decay"]
+    optimization["early_stopping"] = dict(monitor="balanced_accuracy", patience=10,
+                                           min_epochs=15, min_delta=0.0)
     config["model"]["head_dropout"] = hp["dropout"]
     config["model"]["checkpoint"] = str(checkpoint)
     config["runtime"]["output"] = str(output)
