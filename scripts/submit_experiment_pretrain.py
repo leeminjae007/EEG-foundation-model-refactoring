@@ -11,7 +11,7 @@ import yaml
 def digest(path): return hashlib.sha256(Path(path).read_bytes()).hexdigest()
 
 def main():
-    parser = argparse.ArgumentParser(); parser.add_argument("--experiment", required=True, type=Path); parser.add_argument("--config", default="configs/pretrain_gr2_geometry.yaml"); parser.add_argument("--preset", choices=("gr2-mjde-d4-geometry", "gr2-d2-static", "gr2-d2-patch-scalar", "gr2-d2-patch-dimension", "gr2-d2-patch-dimension-mask55", "gr2-d2-patch-dimension-mask60")); parser.add_argument("--prepare-only", action="store_true")
+    parser = argparse.ArgumentParser(); parser.add_argument("--experiment", required=True, type=Path); parser.add_argument("--config", default="configs/pretrain_gr2_geometry.yaml"); parser.add_argument("--preset", choices=("gr2-mjde-d4-geometry", "gr2-d2-static", "gr2-d2-patch-scalar", "gr2-d2-patch-dimension", "gr2-d2-patch-dimension-mask55", "gr2-d2-patch-dimension-mask60", "gr2-d4-patch-dimension-mask60")); parser.add_argument("--prepare-only", action="store_true")
     args = parser.parse_args(); experiment = args.experiment.resolve(); source = experiment / "source"
     if not (source / "ablation/pretrain.py").is_file(): raise FileNotFoundError("create_experiment_layout.py must run first")
     manifest_path = experiment / "manifest.json"; manifest = json.loads(manifest_path.read_text())
@@ -25,12 +25,13 @@ def main():
         "gr2-d2-patch-dimension": (2, "patch_feature"),
         "gr2-d2-patch-dimension-mask55": (2, "patch_feature"),
         "gr2-d2-patch-dimension-mask60": (2, "patch_feature"),
+        "gr2-d4-patch-dimension-mask60": (4, "patch_feature"),
     }.get(args.preset)
     if profile:
         depth, gate = profile
         config["mae"]["decoder_depth"] = depth
         config["encoder"]["fusion_gate"] = gate
-    if args.preset in ("gr2-d2-patch-dimension-mask55", "gr2-d2-patch-dimension-mask60"):
+    if args.preset in ("gr2-d2-patch-dimension-mask55", "gr2-d2-patch-dimension-mask60", "gr2-d4-patch-dimension-mask60"):
         config["masking"]["mask_ratio"] = 0.55 if args.preset.endswith("mask55") else 0.60
     sys.path.insert(0, str(source))
     from ablation.bootstrap import ensure_data_imports
