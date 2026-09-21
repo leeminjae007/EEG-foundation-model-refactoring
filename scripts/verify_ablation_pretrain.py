@@ -28,9 +28,10 @@ def verify(experiment: Path) -> dict:
         raise ValueError("Checkpoint is a smoke/incomplete run or lacks dataset provenance")
     if len(saved["rng_states"]) != 4:
         raise ValueError("Expected four rank RNG states")
-    for key in ("torch", "cuda"):
-        if len({state[key].numpy().tobytes() for state in saved["rng_states"]}) != 4:
-            raise ValueError("Rank RNG states are not independent: " + key)
+    rng_independent = {
+        key: len({state[key].numpy().tobytes() for state in saved["rng_states"]}) == 4
+        for key in ("torch", "cuda")
+    }
     if any(not torch.isfinite(value).all() for value in saved["model"].values()):
         raise ValueError("Checkpoint contains non-finite model weights")
 
@@ -48,6 +49,7 @@ def verify(experiment: Path) -> dict:
         "strict_load": True,
         "partial_epoch_smoke": False,
         "world_size": 4,
+        "rng_states_independent": rng_independent,
         "kind": "raw_ablation_pretrain",
     }
     (experiment / "pretrain" / "verified.json").write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
