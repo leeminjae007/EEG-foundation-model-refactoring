@@ -30,16 +30,24 @@ def main():
         if str(checkpoint) != verified['checkpoint'] or hashlib.sha256(checkpoint.read_bytes()).hexdigest() != verified['sha256']:
             raise ValueError('Downstream checkpoint differs from verified pretrain')
     from scripts.downstream_gpu_guard import allocated_gpu
-    query = subprocess.check_output(['nvidia-smi', '--query-gpu=uuid,memory.total,memory.free',
-                                     '--format=csv,noheader,nounits'], text=True)
-    health = allocated_gpu(query, 12288)
-    os.environ.update(CUDA_VISIBLE_DEVICES=health['gpu_uuid'], CUDA_DEVICE_ORDER='PCI_BUS_ID',
-                      OMP_NUM_THREADS='2', MKL_NUM_THREADS='2', OPENBLAS_NUM_THREADS='2')
-    import torch
-    torch.ones(1, device='cuda:0').sum().item()
-    torch.cuda.synchronize()
-    health.update(cuda_probe='passed', job=os.environ['SLURM_JOB_ID'], node=os.environ.get('SLURMD_NODENAME'))
-    (output / 'gpu-health.json').write_text(json.dumps(health, indent=2))
+    health = dict(job=os.environ.get('SLURM_JOB_ID'), node=os.environ.get('SLURMD_NODENAME'),
+                  cuda_probe='starting')
+    try:
+        query = subprocess.check_output(['nvidia-smi', '--query-gpu=uuid,memory.total,memory.free',
+                                         '--format=csv,noheader,nounits'], text=True)
+        health.update(allocated_gpu(query, 12288))
+        os.environ.update(CUDA_VISIBLE_DEVICES=health['gpu_uuid'], CUDA_DEVICE_ORDER='PCI_BUS_ID',
+                          OMP_NUM_THREADS='2', MKL_NUM_THREADS='2', OPENBLAS_NUM_THREADS='2')
+        import torch
+        torch.ones(1, device='cuda:0').sum().item()
+        torch.cuda.synchronize()
+        health['cuda_probe'] = 'passed'
+    except Exception as exc:
+        health.update(cuda_probe='failed', error=repr(exc))
+        raise
+    finally:
+        # Persist the diagnostic even when an allocated L40S is unhealthy.
+        (output / 'gpu-health.json').write_text(json.dumps(health, indent=2))
     command = [sys.executable, str(source / 'scripts/run_downstream_with_results.py'),
                '--experiment', str(args.experiment), '--config', entry['config'],
                '--dataset', entry['dataset'], '--seed', str(entry['seed']), '--source', str(source),
