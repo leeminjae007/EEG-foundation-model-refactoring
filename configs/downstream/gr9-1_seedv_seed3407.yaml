@@ -6,7 +6,7 @@ data:
 model:
   checkpoint: outputs/gr9_1_epoch40.pth
   head_dropout: 0.1
-  head_hidden_tokens: 4
+  head_hidden_tokens: null
 optimization:
   epochs: 50
   batch_size_per_gpu: 64
