@@ -162,7 +162,7 @@ def aggregate(campaign):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('action', choices=('prepare', 'launch', 'aggregate'))
+    parser.add_argument('action', choices=('prepare', 'submit', 'launch', 'aggregate'))
     parser.add_argument('--output-root', type=Path,
                         default=Path('/gpfs/data/oermannlab/users/ml10266/workspace/eegfm/results'))
     parser.add_argument('--campaign', type=Path)
@@ -171,6 +171,11 @@ def main():
         if args.campaign is None:
             parser.error('aggregate requires --campaign')
         return aggregate(args.campaign.resolve())
+    if args.action == 'submit':
+        if args.campaign is None:
+            parser.error('submit requires --campaign')
+        submit(args.campaign.resolve())
+        return 0
     campaign = prepare(args.output_root)
     print(campaign)
     if args.action == 'launch':
