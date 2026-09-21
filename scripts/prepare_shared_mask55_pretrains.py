@@ -116,9 +116,21 @@ def snapshot(destination):
 
 
 def grant_account(folder, account):
-    subprocess.run(["setfacl", "-R", "-m", f"u:{account}:rwx,u:{OWNER}:rwx,m:rwx", str(folder)], check=True)
-    for directory in [folder, *[path for path in folder.rglob("*") if path.is_dir()]]:
-        subprocess.run(["setfacl", "-m", f"d:u:{account}:rwx,d:u:{OWNER}:rwx,d:m:rwx", str(directory)], check=True)
+    acl = subprocess.run(["setfacl", "-R", "-m", f"u:{account}:rwx,u:{OWNER}:rwx,m:rwx", str(folder)],
+                         stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+    if acl.returncode == 0:
+        for directory in [folder, *[path for path in folder.rglob("*") if path.is_dir()]]:
+            subprocess.run(["setfacl", "-m", f"d:u:{account}:rwx,d:u:{OWNER}:rwx,d:m:rwx", str(directory)],
+                           check=True)
+        return "account_acl"
+    # This GPFS deployment reports EOPNOTSUPP for POSIX ACLs. Scope the
+    # fallback to the six newly created arm directories; source and every
+    # other experiment remain read-only. Frozen config hashes are checked at
+    # submission and again inside the worker.
+    for path in folder.rglob("*"):
+        path.chmod(0o777 if path.is_dir() else (0o755 if path.name == "worker.sh" else 0o666))
+    folder.chmod(0o777)
+    return "exact_arm_posix_mode"
 
 
 def prepare(results_root):
@@ -168,10 +180,14 @@ def prepare(results_root):
                           + str(source / "scripts/gr2_pretrain_campaign.py")
                           + " worker --folder " + str(arm) + "\n", encoding="utf-8")
         worker.chmod(0o755)
-        grant_account(arm, account)
+        access_mode = grant_account(arm, account)
+        manifest["collaboration_access"] = access_mode
+        write_json(arm / "manifest.json", manifest)
+        (arm / "manifest.json").chmod(0o666)
         entries.append(dict(slug=slug, assigned_account=account, arm_folder=str(arm),
                             config=str(config_path), config_sha256=entry["config_sha256"],
-                            fusion_gate_applicability=config["ablation"]["fusion_gate_applicability"]))
+                            fusion_gate_applicability=config["ablation"]["fusion_gate_applicability"],
+                            collaboration_access=access_mode))
     write_json(campaign / "manifest.json", dict(
         experiment=campaign.name, owner=OWNER, source_commit=commit, source=str(source),
         launcher_sha256=launcher_sha, assignments={key: [row[0] for row in value] for key, value in ASSIGNMENTS.items()},
