@@ -13,7 +13,14 @@
 set -euo pipefail
 
 cd "$SLURM_SUBMIT_DIR"
-source scripts/activate.sh
+# Submitters run the shared checkout from their own conda environment.  Slurm
+# inherits that environment, so do not replace it with the checkout owner's
+# optional .venv.  Retain the old path only for legacy owner-side submissions.
+if [[ -z "${CONDA_PREFIX:-}" ]]; then
+  source scripts/activate.sh
+else
+  export PYTHONNOUSERSITE=1
+fi
 arm="${1:-encoder_labram}"
 seed="${2:-42}"
 if (( $# >= 2 )); then shift 2; else shift "$#"; fi

@@ -16,8 +16,21 @@ case "$group" in
   *) echo "Usage: $0 [--replace-pending] {encoder|pe|all|CONFIG_NAME} [SEED] [TRAIN_ARGS...]" >&2; exit 2 ;;
 esac
 [[ "$seed" =~ ^[0-9]+$ ]] || { echo "SEED must be a nonnegative integer" >&2; exit 2; }
-mkdir -p logs/ablation
 export OMP_NUM_THREADS=2 OPENBLAS_NUM_THREADS=2 MKL_NUM_THREADS=2 PYTHONUNBUFFERED=1
+
+# A collaborator may execute this shared checkout without write access to the
+# repository.  When --output is supplied, keep Slurm's stdout/stderr beside
+# that owned experiment output rather than under the shared checkout's logs/.
+train_args=("$@")
+output_dir=""
+for ((arg_index = 0; arg_index < ${#train_args[@]}; arg_index++)); do
+  case "${train_args[$arg_index]}" in
+    --output)
+      ((arg_index + 1 < ${#train_args[@]})) || { echo "--output requires a directory" >&2; exit 2; }
+      output_dir="${train_args[$((arg_index + 1))]}" ;;
+    --output=*) output_dir="${train_args[$arg_index]#--output=}" ;;
+  esac
+done
 
 for arm in "${arms[@]}"; do
   if [[ "$arm" == encoder_* ]]; then
@@ -40,6 +53,13 @@ for arm in "${arms[@]}"; do
     echo "Skip $job_name: already queued/running ($queued)"
     continue
   fi
-  sbatch --job-name="$job_name" --chdir="$PWD" \
+  log_args=()
+  if [[ -n "$output_dir" ]]; then
+    mkdir -p "$output_dir/logs"
+    log_args=("--output=$output_dir/logs/%x-%j.out" "--error=$output_dir/logs/%x-%j.err")
+  else
+    mkdir -p logs/ablation
+  fi
+  sbatch --job-name="$job_name" --chdir="$PWD" "${log_args[@]}" \
     ablation/scripts/pretrain_flexible.slurm "$arm" "$seed" "$@"
 done
