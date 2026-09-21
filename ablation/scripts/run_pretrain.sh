@@ -18,6 +18,21 @@ esac
 [[ "$seed" =~ ^[0-9]+$ ]] || { echo "SEED must be a nonnegative integer" >&2; exit 2; }
 export OMP_NUM_THREADS=2 OPENBLAS_NUM_THREADS=2 MKL_NUM_THREADS=2 PYTHONUNBUFFERED=1
 
+# Use the centrally maintained A100 health exclusion list.  The ablation
+# launcher used to omit this when calling sbatch, allowing known-bad GPUs to
+# be allocated despite their presence in the cluster policy.
+excluded_nodes_csv="$(python - <<'PY'
+from pathlib import Path
+import yaml
+policy = yaml.safe_load(Path("configs/cluster/bigpurple_a100.yaml").read_text())
+print(",".join(policy["slurm"]["pretrain"].get("excluded_nodes", [])))
+PY
+)"
+exclude_args=()
+if [[ -n "$excluded_nodes_csv" ]]; then
+  exclude_args=("--exclude=$excluded_nodes_csv")
+fi
+
 # A collaborator may execute this shared checkout without write access to the
 # repository.  When --output is supplied, keep Slurm's stdout/stderr beside
 # that owned experiment output rather than under the shared checkout's logs/.
@@ -60,6 +75,6 @@ for arm in "${arms[@]}"; do
   else
     mkdir -p logs/ablation
   fi
-  sbatch --job-name="$job_name" --chdir="$PWD" "${log_args[@]}" \
+  sbatch --job-name="$job_name" --chdir="$PWD" "${exclude_args[@]}" "${log_args[@]}" \
     ablation/scripts/pretrain_flexible.slurm "$arm" "$seed" "$@"
 done
