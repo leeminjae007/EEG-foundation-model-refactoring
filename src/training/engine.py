@@ -195,6 +195,7 @@ def build_finetune(config):
         backbone = build_backbone(pretrain)
     else:
         backbone = EEGEncoder(pretrain)
+    expected_keys = set(backbone.state_dict())
     weights = {}
     for key, value in checkpoint["model"].items():
         if key.startswith("backbone."):
@@ -203,8 +204,18 @@ def build_finetune(config):
             # while the downstream EEGEncoder owns that module directly as
             # ``encoder``.  This is a namespace-only compatibility mapping;
             # strict loading below still verifies every tensor and shape.
-            if key.startswith("encoder.core."):
-                key = "encoder." + key[len("encoder.core."):]
+            if key not in expected_keys and key.startswith("encoder.core."):
+                candidate = "encoder." + key[len("encoder.core."):]
+                if candidate in expected_keys:
+                    key = candidate
+            # Raw ablation checkpoints save the wrapped core as ``encoder``;
+            # AblationBackbone exposes it as ``encoder.core`` at finetune.
+            if key not in expected_keys and key.startswith("encoder."):
+                candidate = "encoder.core." + key[len("encoder."):]
+                if candidate in expected_keys:
+                    key = candidate
+            if key in weights:
+                raise ValueError("Duplicate backbone checkpoint key after mapping: " + key)
             weights[key] = value
     backbone.load_state_dict(weights, strict=True)
     spec = get_dataset_spec(config["data"]["dataset"])
