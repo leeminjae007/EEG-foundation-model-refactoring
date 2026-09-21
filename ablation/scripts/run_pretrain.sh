@@ -110,7 +110,7 @@ PY
       --partition=cpu_short,cpu_long --nodes=1 --ntasks=1 --cpus-per-task=1 --mem=4G --time=01:00:00 \
       --dependency="afterok:$pretrain_job" --kill-on-invalid-dep=yes --chdir="$PWD" \
       --output="$experiment_dir/downstream-dispatch-%j.out" --error="$experiment_dir/downstream-dispatch-%j.err" \
-      --wrap="exec $(command -v python) scripts/submit_existing_downstream.py --experiment $experiment_dir --checkpoint $checkpoint --l40s")"
+      --wrap="$(command -v python) scripts/verify_ablation_pretrain.py --experiment $experiment_dir && exec $(command -v python) scripts/submit_existing_downstream.py --experiment $experiment_dir --checkpoint $checkpoint --l40s")"
     echo "Submitted downstream dispatcher ${callback%%;*} (afterok:$pretrain_job)"
   fi
 done
