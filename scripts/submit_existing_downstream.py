@@ -40,6 +40,8 @@ def main():
     parser.add_argument("--checkpoint", required=True, type=Path)
     parser.add_argument("--account", default=None)
     parser.add_argument("--l40s", action="store_true", help="Use the ablation L40S per-dataset policy")
+    parser.add_argument("--skip-gate-visualization", action="store_true",
+                        help="Record that a gate-free ablation has no gate visualization")
     parser.add_argument("--dry-run", action="store_true")
     args = parser.parse_args(); experiment = args.experiment.resolve(); checkpoint = args.checkpoint.resolve()
     if not (experiment / "manifest.json").is_file() or not checkpoint.is_file():
@@ -57,7 +59,12 @@ def main():
     repair = experiment / "downstream_repair"; source = repair / "source"
     if source.exists(): shutil.rmtree(source)
     shutil.copytree(ROOT, source, ignore=shutil.ignore_patterns(".git", "outputs", "results", "__pycache__", "*.pyc", "*.pth"))
-    subprocess.run([sys.executable, str(source / "scripts/visualize_fusion_gates.py"), "--checkpoint", str(checkpoint), "--output-dir", str(repair / "gate_visualization")], check=True)
+    if args.skip_gate_visualization:
+        (repair / "gate_visualization_skipped.json").write_text(
+            json.dumps({"reason": "gate-free ablation", "checkpoint": str(checkpoint)}, indent=2) + "\n"
+        )
+    else:
+        subprocess.run([sys.executable, str(source / "scripts/visualize_fusion_gates.py"), "--checkpoint", str(checkpoint), "--output-dir", str(repair / "gate_visualization")], check=True)
     config_dir = experiment / "configs/downstream"; config_dir.mkdir(parents=True, exist_ok=True)
     entries = []
     for dataset in DATASETS:
