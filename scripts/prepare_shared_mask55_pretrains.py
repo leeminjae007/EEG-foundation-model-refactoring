@@ -209,7 +209,8 @@ def prepare(results_root):
         experiment=campaign.name, owner=OWNER, source_commit=commit, source=str(source),
         launcher_sha256=launcher_sha, assignments={key: [row[0] for row in value] for key, value in ASSIGNMENTS.items()},
         settings=dict(mask_ratio=.55, decoder_depth=2, reference_fusion_gate="patch_feature",
-                      epochs=40, seed=42, gpu="a100", tasks=4, downstream=False),
+                      epochs=40, seed=42, gpu="a100", tasks=4,
+                      downstream={"hk4935": "gl40s_afterok", "yc8820": False}),
         resources=policy["pretrain"], entries=entries, status="prepared"))
     return campaign
 
@@ -294,7 +295,9 @@ def status(campaign):
             matches = [line.split("|") for line in output.stdout.splitlines() if line.split("|")[0] == job]
             state = matches[-1][1].split()[0] if matches else "UNKNOWN"
         rows.append(dict(account=entry["assigned_account"], arm=entry["slug"], job=job, state=state,
-                         verified=(Path(entry["arm_folder"]) / "pretrain/verified.json").is_file()))
+                         verified=(Path(entry["arm_folder"]) / "pretrain/verified.json").is_file(),
+                         downstream_jobs={row["dataset"]: row["job"] for row in manifest.get("downstream_jobs", [])},
+                         finalizer_job=manifest.get("finalizer_job")))
     return rows
 
 
