@@ -156,16 +156,17 @@ def submit(campaign):
                 '--experiment', str(campaign), '--source', str(source)]
         command = ['sbatch', '--parsable', '--account=system',
                    '--job-name=mask55-three-l40s-' + dataset,
-                   '--partition=gl40s_short,gl40s_long', '--nodes=1', '--ntasks=1',
+                   '--partition=gl40s_dev,gl40s_short,gl40s_long', '--nodes=1', '--ntasks=1',
                    '--gpus-per-task=l40s:1', '--cpus-per-task=2', '--mem=32G',
-                   '--time=08:00:00', '--array=' + ','.join(map(str, indices)) + '%5',
+                   '--time=04:00:00', '--array=' + ','.join(map(str, indices)) + '%5',
                    '--chdir=' + str(source),
                    '--output=' + str(logs / (dataset + '-%A_%a.out')),
                    '--error=' + str(logs / (dataset + '-%A_%a.err')),
                    '--wrap=exec ' + shlex.join(wrap)]
         job = subprocess.check_output(command, text=True).strip().split(';', 1)[0]
         manifest['downstream_jobs'].append(dict(dataset=dataset, job=job, indices=indices,
-                                                gpu='l40s', time='08:00:00'))
+                                                gpu='l40s', time='04:00:00',
+                                                partitions='gl40s_dev,gl40s_short,gl40s_long'))
         write_json(manifest_path, manifest)
     jobs = [item['job'] for item in manifest['downstream_jobs']]
     finalizer = subprocess.check_output([

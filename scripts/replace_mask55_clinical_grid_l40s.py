@@ -57,9 +57,9 @@ def prepare():
     manifest.update(replacement_of=str(OLD_CAMPAIGN), replaced_jobs=OLD_JOBS,
                     early_stopping=EARLY_STOPPING,
                     test_policy='Test reporting only from validation-BAcc checkpoint',
-                    resources=dict(gpu='l40s', partitions='gl40s_short,gl40s_long',
+                    resources=dict(gpu='l40s', partitions='gl40s_dev,gl40s_short,gl40s_long',
                                    cpus=2, memory='32G', concurrency_per_dataset=10,
-                                   time_limits={'isruc': '08:00:00', 'hmc': '08:00:00',
+                                   time_limits={'isruc': '04:00:00', 'hmc': '04:00:00',
                                                 'siena': '04:00:00'}))
     write_json(manifest_path, manifest)
     print(campaign)
@@ -94,7 +94,7 @@ def submit(campaign):
                 '--experiment', str(campaign), '--source', str(campaign / 'source')]
         command = ['sbatch', '--parsable', '--account=system',
                    '--job-name=mask55-clinical-es-' + dataset,
-                   '--partition=gl40s_short,gl40s_long', '--nodes=1', '--ntasks=1',
+                   '--partition=gl40s_dev,gl40s_short,gl40s_long', '--nodes=1', '--ntasks=1',
                    '--gpus-per-task=l40s:1', '--cpus-per-task=2', '--mem=32G',
                    '--time=' + manifest['resources']['time_limits'][dataset],
                    '--array=' + ','.join(map(str, indices)) + '%10',
