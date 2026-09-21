@@ -23,12 +23,36 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 from scripts.submit_mask55_hp_grid import digest, write_json
 from src.data.datasets.processed_dataset import _loads
+from src.data.datasets.registry import get_dataset_spec
 
 BASE = Path('/gpfs/data/oermannlab/users/ml10266/workspace/eegfm/results/260920-0342-gr2-d2-patch-dimension-mask55')
 RESULTS = Path('/gpfs/data/oermannlab/users/ml10266/workspace/eegfm/results')
 DATA = Path('/gpfs/data/oermannlab/users/ml10266/Data/eeg_foundation_downstream')
 SEEDS = (42, 696, 1001, 1234, 3407)
 DATASETS = ('mumtaz', 'bcic2020_3', 'bciciv2a')
+SPLIT_LENGTHS = {
+    'mumtaz': (4891, 1041, 1211),
+    'bcic2020_3': (4500, 750, 750),
+}
+
+
+def preflight():
+    paths = {'mumtaz': DATA / 'mumtaz',
+             'bcic2020_3': DATA / 'bcic2020-3/processed',
+             'bciciv2a': DATA / 'bcic-iv-2a/processed_inde_avg_filter'}
+    for dataset, path in paths.items():
+        spec = get_dataset_spec(dataset)
+        for index, split in enumerate(('train', 'val', 'test')):
+            reader = spec.dataset_class(path, split)
+            if dataset in SPLIT_LENGTHS and len(reader) != SPLIT_LENGTHS[dataset][index]:
+                raise ValueError(f'{dataset}/{split}: unexpected split size {len(reader)}')
+            sample = reader[0]
+            if tuple(sample['x'].shape) != (spec.num_channels, spec.signal_length):
+                raise ValueError(f'{dataset}/{split}: unexpected signal shape')
+            if not bool(sample['channel_validity'].all()):
+                raise ValueError(f'{dataset}/{split}: inactive EEG channels')
+            reader.database.close()
+
 
 
 def train_counts(path):
@@ -89,6 +113,7 @@ def submit_worker(campaign, source, dataset, indices, smoke, dependency, account
 
 
 def main():
+    preflight()
     verified = json.loads((BASE / 'pretrain/verified.json').read_text())
     checkpoint = Path(verified['checkpoint'])
     if not checkpoint.is_file() or digest(checkpoint) != verified['sha256'] or not verified['strict_load']:
