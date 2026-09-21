@@ -54,6 +54,12 @@ if __name__ == "__main__":
     shutil.copytree(ROOT, folder / "source", ignore=snapshot_ignore)
     for name in ("configs", "pretrain/checkpoints", "pretrain/logs", "pretrain/cache", "pretrain/tmp", "downstream"):
         (folder / name).mkdir(parents=True, exist_ok=True)
-    commit = subprocess.check_output(["git", "-C", str(ROOT), "rev-parse", "HEAD"], text=True).strip()
+    # The shared checkout is owned by ml10266, while collaborators execute
+    # launchers from their own Unix accounts.  Scope the exception to this
+    # read-only revision lookup instead of changing their global Git config.
+    commit = subprocess.check_output(
+        ["git", "-c", "safe.directory=" + str(ROOT), "-C", str(ROOT), "rev-parse", "HEAD"],
+        text=True,
+    ).strip()
     (folder / "manifest.json").write_text(json.dumps({"experiment": args.experiment_name, "created_at_new_york": stamp, "source_commit": commit, "publication_root": str(ROOT / "outputs/results"), "status": "prepared"}, indent=2) + "\n", encoding="utf-8")
     print(folder)

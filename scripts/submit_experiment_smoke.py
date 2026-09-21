@@ -26,8 +26,16 @@ def main():
         entry['gpu_partitions'] = 'gl40s_dev,gl40s_short,gl40s_long'
         manifest['pretrain_excluded_nodes'] = []
     cfg = yaml.safe_load(Path(entry['config']).read_text())
-    assert cfg['mae']['decoder_depth'] == 2 and cfg['encoder']['fusion_gate'] == 'patch_feature'
-    assert cfg['masking']['mask_ratio'] == .6 and cfg['optimization']['batch_size_per_gpu'] == 128
+    profiles = {
+        'gr2-d2-patch-dimension-mask60': (2, 'patch_feature', .6),
+        'gr2-d4-patch-dimension-mask60': (4, 'patch_feature', .6),
+    }
+    expected = profiles.get(manifest.get('preset'))
+    if expected is None:
+        raise ValueError('Smoke profile is not defined for preset: ' + str(manifest.get('preset')))
+    depth, gate, ratio = expected
+    assert cfg['mae']['decoder_depth'] == depth and cfg['encoder']['fusion_gate'] == gate
+    assert cfg['masking']['mask_ratio'] == ratio and cfg['optimization']['batch_size_per_gpu'] == 128
     cfg['runtime']['log_every_steps'] = 5
     Path(entry['config']).write_text(yaml.safe_dump(cfg, sort_keys=False))
     entry['config_sha256'] = hashlib.sha256(Path(entry['config']).read_bytes()).hexdigest()
