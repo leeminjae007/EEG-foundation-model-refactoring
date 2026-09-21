@@ -10,7 +10,9 @@ datasets:
   siena: {partitions: 'gl40s_dev,gl40s_short', time: '04:00:00'}
   physionet_mi: {partitions: 'gl40s_dev,gl40s_short', time: '04:00:00'}
   tuev: {partitions: gl40s_long, time: '12:00:00'}
-  tuab: {partitions: gl40s_long, time: '12:00:00'}
+  # TUAB exceeded the former four-hour A100 allocation.  Reserve a full long
+  # partition day so five independent seed jobs can finish or resume safely.
+  tuab: {partitions: gl40s_long, time: '24:00:00'}
   faced: {partitions: 'gl40s_dev,gl40s_short', time: '12:00:00'}
   seedv: {partitions: 'gl40s_dev,gl40s_short', time: '04:00:00'}
   mentalarithmetic: {partitions: 'gl40s_dev,gl40s_short', time: '04:00:00'}

@@ -12,10 +12,6 @@ SEEDS = (42, 696, 1001, 1234, 3407)
 DATASETS = ('chb', 'siena', 'physionet_mi', 'tuev', 'tuab', 'faced', 'seedv',
             'mentalarithmetic', 'isruc', 'hmc', 'tusl', 'tusz')
 TEMPLATE_PREFIX = {'tusz': 'nearest3_7', 'tusl': 'nearest3_7'}
-MAIN_A100 = {'gr2-mjde-d4-geometry', 'gr2-d2-static', 'gr2-d2-patch-scalar', 'gr2-d2-patch-dimension',
-             'gr2-d2-patch-dimension-mask60', 'gr2-d4-patch-dimension-mask60'}
-
-
 def warmup(value):
     if isinstance(value, dict):
         return any('warmup' in str(k).lower() or warmup(v) for k, v in value.items())
@@ -23,15 +19,11 @@ def warmup(value):
 
 
 def resource_policy(source, preset, dataset):
-    cluster = yaml.safe_load((source / 'configs/cluster/bigpurple_a100.yaml').read_text())['slurm']
-    if preset in MAIN_A100:
-        result = dict(cluster['downstream'])
-        if dataset in ('chb', 'tuab', 'tuev', 'faced', 'isruc', 'hmc'):
-            result.update(partitions='a100_short,a100_long', time='12:00:00')
-    else:
-        policy = yaml.safe_load((source / 'configs/cluster/downstream_l40s.yaml').read_text())
-        result = {k: v for k, v in policy.items() if k != 'datasets'}
-        result.update(policy['datasets'][dataset])
+    # All ablation downstream evaluations run on L40S.  A100 is reserved for
+    # pretraining, so result comparability never depends on GPU type.
+    policy = yaml.safe_load((source / 'configs/cluster/downstream_l40s.yaml').read_text())
+    result = {k: v for k, v in policy.items() if k != 'datasets'}
+    result.update(policy['datasets'][dataset])
     return result
 
 
