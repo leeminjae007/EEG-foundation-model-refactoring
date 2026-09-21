@@ -35,7 +35,8 @@ def resolve_ablation(config):
     config = deepcopy(config)
     settings = config.setdefault("ablation", {})
     allowed = {"encoder", "position", "mask_mode", "protocol", "pe_scope", "depth", "name",
-               "reve_freqs", "reve_noise_ratio", "channel_vocabulary"}
+               "reve_freqs", "reve_noise_ratio", "channel_vocabulary", "reference_fusion_gate",
+               "fusion_gate_applicability"}
     unknown = set(settings) - allowed
     if unknown:
         raise ValueError("Unknown ablation options: " + str(sorted(unknown)))
@@ -52,6 +53,10 @@ def resolve_ablation(config):
         raise ValueError("Unknown encoder block protocol")
     if settings["pe_scope"] not in ("encoder", "both"):
         raise ValueError("pe_scope must be encoder or both")
+    if settings.get("reference_fusion_gate") not in (None, "patch_feature"):
+        raise ValueError("reference_fusion_gate must be patch_feature when specified")
+    if settings.get("fusion_gate_applicability") not in (None, "active", "not_applicable_encoder_replaced"):
+        raise ValueError("Unknown fusion_gate_applicability")
     if "depth" in settings and (settings["encoder"].startswith("mjde") or
                                 not isinstance(settings["depth"], int) or settings["depth"] < 1):
         raise ValueError("depth is a positive integer for paper encoders only; MJDE-lite is one stage")
