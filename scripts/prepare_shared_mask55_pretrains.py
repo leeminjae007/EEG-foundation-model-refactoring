@@ -17,6 +17,7 @@ import time
 import yaml
 
 ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT))
 DEFAULT_RESULTS = Path("/gpfs/data/oermannlab/users/ml10266/workspace/eegfm/results")
 OWNER = "ml10266"
 ASSIGNMENTS = {
