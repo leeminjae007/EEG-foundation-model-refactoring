@@ -232,11 +232,22 @@ def build_finetune(config):
 def optimizer_groups(model, config):
     encoder_parameters = list(model.backbone.position.parameters())
     encoder_parameters.extend(model.backbone.encoder.parameters())
-    return [
-        {"name": "tokenizer", "params": list(model.backbone.tokenizer.parameters()), "lr": config["tokenizer_learning_rate"]},
-        {"name": "encoder", "params": encoder_parameters, "lr": config["encoder_learning_rate"]},
-        {"name": "head", "params": list(model.head.parameters()), "lr": config["head_learning_rate"]},
-    ]
+    # A head-only control keeps the pretrained tokenizer/position/encoder
+    # immutable.  Do not hand frozen tensors to AdamW: this makes the
+    # optimizer audit unambiguous and prevents accidental decoupled decay.
+    tokenizer_parameters = [item for item in model.backbone.tokenizer.parameters() if item.requires_grad]
+    encoder_parameters = [item for item in encoder_parameters if item.requires_grad]
+    head_parameters = [item for item in model.head.parameters() if item.requires_grad]
+    groups = []
+    if tokenizer_parameters:
+        groups.append({"name": "tokenizer", "params": tokenizer_parameters, "lr": config["tokenizer_learning_rate"]})
+    if encoder_parameters:
+        groups.append({"name": "encoder", "params": encoder_parameters, "lr": config["encoder_learning_rate"]})
+    if head_parameters:
+        groups.append({"name": "head", "params": head_parameters, "lr": config["head_learning_rate"]})
+    if not groups:
+        raise ValueError("finetune has no trainable parameters")
+    return groups
 
 
 def predict(model, batch, device):
@@ -351,6 +362,11 @@ def run_finetune(config, args, policy=None):
         if smoke_batches and split == "train":
             loaders[split] = LimitedLoader(loaders[split], smoke_batches * accumulation)
     model = build_finetune(config).to(device)
+    if config["model"].get("freeze_backbone", False):
+        for parameter in model.backbone.parameters():
+            parameter.requires_grad_(False)
+        if not any(parameter.requires_grad for parameter in model.head.parameters()):
+            raise ValueError("freeze_backbone requires a trainable task head")
     if rank == 0:
         (output / "initialization.json").write_text(json.dumps(fingerprint(model), indent=2))
     optimizer = torch.optim.AdamW(optimizer_groups(model, optimization),
