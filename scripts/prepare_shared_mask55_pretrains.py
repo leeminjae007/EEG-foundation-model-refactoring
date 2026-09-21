@@ -109,6 +109,14 @@ def source_commit():
     ], text=True).strip()
 
 
+def checkout_contains(commit):
+    result = subprocess.run([
+        "git", "-c", "safe.directory=" + str(ROOT), "-C", str(ROOT),
+        "merge-base", "--is-ancestor", commit, "HEAD",
+    ])
+    return result.returncode == 0
+
+
 def snapshot(destination):
     shutil.copytree(ROOT, destination, ignore=shutil.ignore_patterns(
         ".git", ".venv*", "outputs", "results", "__pycache__", "*.pyc", "*.pth", "Data"))
@@ -213,8 +221,8 @@ def submit(campaign):
         raise PermissionError("This launcher is assigned only to hk4935 or yc8820")
     require_environment()
     top = json.loads((campaign / "manifest.json").read_text())
-    if top["source_commit"] != source_commit():
-        raise ValueError("Shared checkout HEAD differs from the frozen campaign; pull the owner's repository first")
+    if not checkout_contains(top["source_commit"]):
+        raise ValueError("Shared checkout does not contain the frozen campaign commit; pull the owner's repository first")
     jobs = {}
     controller = campaign / "source/scripts/gr2_pretrain_campaign.py"
     for slug, _, _ in ASSIGNMENTS[account]:
