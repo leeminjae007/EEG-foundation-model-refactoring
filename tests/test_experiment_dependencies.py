@@ -9,6 +9,7 @@ import torch
 import yaml
 
 from scripts import submit_experiment_downstream as downstream
+from scripts import submit_experiment_smoke as smoke
 from scripts import finalize_experiment
 from src.training.smoke import TimedSmoke, LimitedLoader
 
@@ -19,7 +20,7 @@ def experiment(tmp_path):
     folder = tmp_path / 'experiment'
     (folder / 'source').mkdir(parents=True)
     shutil.copytree(ROOT / 'configs', folder / 'source/configs')
-    (folder / 'manifest.json').write_text(json.dumps(dict(preset='gr2-d2-patch-dimension-mask60')))
+    (folder / 'manifest.json').write_text(json.dumps(dict(preset='gr2-d4-patch-dimension-mask55')))
     return folder
 
 
@@ -70,8 +71,11 @@ def test_all_60_configs_preserve_common_lr_and_base_settings(tmp_path):
                 assert cfg['optimization']['label_smoothing'] == 0
     for dataset in ('chb', 'tuab', 'tuev'):
         assert downstream.resource_policy(folder / 'source', 'later-ablation', dataset)['partitions'] == 'gl40s_long'
-        assert downstream.resource_policy(folder / 'source', 'gr2-d2-patch-dimension-mask60', dataset)['partitions'] == 'a100_short,a100_long'
-    assert downstream.resource_policy(folder / 'source', 'gr2-d2-static', 'tuab')['gpu'] == 'a100'
+        for preset in ('gr2-d4-patch-dimension-mask55', 'gr2-d4-patch-dimension-mask60'):
+            policy = downstream.resource_policy(folder / 'source', preset, dataset)
+            assert policy['partitions'] == 'a100_short,a100_long'
+            assert policy['gpu'] == 'a100'
+    assert downstream.resource_policy(folder / 'source', 'gr2-d2-static', 'tuab')['gpu'] == 'l40s'
 
 
 def test_missing_or_smoke_results_never_publish(tmp_path, monkeypatch):
@@ -106,6 +110,43 @@ def test_limited_loader_preserves_sampler_and_batch_size():
     assert limited.sampler is loader.sampler
     assert len(limited) == 4
     assert [len(batch) for batch in limited] == [64] * 4
+
+
+def test_mask55_smoke_requests_a100_for_both_stages(tmp_path, monkeypatch):
+    folder = tmp_path / 'smoke'
+    config_path = folder / 'configs/pretrain.yaml'
+    config_path.parent.mkdir(parents=True)
+    config_path.write_text(yaml.safe_dump({
+        'mae': {'decoder_depth': 4},
+        'encoder': {'fusion_gate': 'patch_feature'},
+        'masking': {'mask_ratio': .55},
+        'optimization': {'batch_size_per_gpu': 128},
+        'runtime': {},
+    }))
+    downstream_config = folder / 'configs/downstream/tusz_seed42.yaml'
+    downstream_config.parent.mkdir(parents=True)
+    downstream_config.write_text(yaml.safe_dump({'model': {}, 'runtime': {}}))
+    (folder / 'downstream_entries.json').write_text(json.dumps([{'config': str(downstream_config)}]))
+    manifest = {
+        'preset': 'gr2-d4-patch-dimension-mask55',
+        'pretrain_entries': [{'config': str(config_path), 'gpu_partitions': 'a100_short,a100_long'}],
+        'pretrain_excluded_nodes': [],
+    }
+    (folder / 'manifest.json').write_text(json.dumps(manifest))
+    calls = []
+
+    def submit(command, **kwargs):
+        calls.append(command)
+        return ('901\n' if len(calls) == 1 else '902\n')
+
+    monkeypatch.setattr(smoke.subprocess, 'check_output', submit)
+    monkeypatch.setattr(sys, 'argv', ['smoke', '--experiment', str(folder), '--gpu', 'a100'])
+    smoke.main()
+    assert len(calls) == 2
+    downstream_command = calls[1]
+    assert '--partition=a100_short,a100_long' in downstream_command
+    assert '--gpus-per-task=a100:1' in downstream_command
+    assert '--gpus-per-task=a100:1' in next(x for x in downstream_command if x.startswith('--wrap='))
 
 
 def test_finalizer_publishes_only_all_five_and_is_idempotent(tmp_path, monkeypatch):

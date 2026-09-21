@@ -28,6 +28,7 @@ def main():
     cfg = yaml.safe_load(Path(entry['config']).read_text())
     profiles = {
         'gr2-d2-patch-dimension-mask60': (2, 'patch_feature', .6),
+        'gr2-d4-patch-dimension-mask55': (4, 'patch_feature', .55),
         'gr2-d4-patch-dimension-mask60': (4, 'patch_feature', .6),
     }
     expected = profiles.get(manifest.get('preset'))
@@ -53,13 +54,14 @@ def main():
     logs.mkdir(parents=True, exist_ok=True)
     command = [sys.executable, str(source / 'scripts/downstream_experiment_worker.py'),
                '--experiment', str(folder), '--smoke-batches', '4']
-    downstream = subprocess.check_output(['sbatch', '--parsable', '--account=system', '--job-name=mask60-ds-smoke',
-        '--partition=gl40s_short,gl40s_long', '--nodes=1', '--ntasks=1', '--gpus-per-task=l40s:1',
+    smoke_partition = 'a100_short,a100_long' if args.gpu == 'a100' else 'gl40s_short,gl40s_long'
+    downstream = subprocess.check_output(['sbatch', '--parsable', '--account=system', '--job-name=patch-dim-ds-smoke',
+        '--partition=' + smoke_partition, '--nodes=1', '--ntasks=1', '--gpus-per-task=' + args.gpu + ':1',
         '--cpus-per-task=2', '--mem=32G', '--time=00:30:00',
         '--array=' + ','.join(str(i) for i in range(0, 60, 5)) + '%4',
         '--dependency=afterok:' + job, '--kill-on-invalid-dep=yes',
         '--output=' + str(logs / 'smoke-%A_%a.out'), '--error=' + str(logs / 'smoke-%A_%a.err'),
-        '--wrap=exec ' + shlex.join(['srun', '--ntasks=1', '--gpus-per-task=l40s:1', '--gpu-bind=single:1',
+        '--wrap=exec ' + shlex.join(['srun', '--ntasks=1', '--gpus-per-task=' + args.gpu + ':1', '--gpu-bind=single:1',
                                     '--kill-on-bad-exit=1'] + command)], text=True).strip().split(';')[0]
     manifest = json.loads(path.read_text())
     manifest['smoke_downstream_job'] = downstream
