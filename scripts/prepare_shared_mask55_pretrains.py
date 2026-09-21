@@ -154,6 +154,9 @@ def prepare(results_root):
     commit = source_commit()
     campaign = results_root / (new_york_stamp() + "-mask55-d2-patchdim-shared-pretrain")
     campaign.mkdir(parents=True)
+    publication_root = campaign / "outputs/results"
+    publication_root.mkdir(parents=True)
+    publication_root.chmod(0o777)
     source = campaign / "source"
     launcher_sha = snapshot(source)
     entries = []
@@ -162,6 +165,7 @@ def prepare(results_root):
         arm = campaign / "accounts" / account / slug
         for name in ("configs", "pretrain", "logs"):
             (arm / name).mkdir(parents=True, exist_ok=True)
+        (arm / "source").symlink_to(source, target_is_directory=True)
         config = spec["config"]
         config["runtime"]["output"] = str(arm / "pretrain")
         config_path = arm / "configs/pretrain.yaml"
@@ -174,6 +178,7 @@ def prepare(results_root):
                      gpu_partitions=policy["pretrain"]["partitions"], timeout_continuation=False)
         manifest = dict(experiment="mask55-d2-patchdim-" + slug, owner=OWNER,
                         assigned_account=account, source_commit=commit, python=None,
+                        created_at_new_york=campaign.name[:11], publication_root=str(publication_root),
                         preset="mask55-d2-patch-dimension", pretrain_launcher="slurm_flexible",
                         pretrain_entries=[entry], pretrain_excluded_nodes=policy["pretrain"]["excluded_nodes"],
                         resource_policy=policy["pretrain"], auto_resume=False, verify_before_success=True,
@@ -215,10 +220,17 @@ def require_environment():
         raise RuntimeError("Activate the CUDA training environment with torch 2.0.1 before submission")
 
 
-def submit(campaign):
+def downstream_allowed(account, requested):
+    if requested and account != "hk4935":
+        raise PermissionError("GL40S downstream is attached only to hk4935's three PE arms")
+    return requested and account == "hk4935"
+
+
+def submit(campaign, with_downstream=False):
     account = getpass.getuser()
     if account not in ASSIGNMENTS:
         raise PermissionError("This launcher is assigned only to hk4935 or yc8820")
+    attach_downstream = downstream_allowed(account, with_downstream)
     require_environment()
     top = json.loads((campaign / "manifest.json").read_text())
     if not checkout_contains(top["source_commit"]):
@@ -231,18 +243,41 @@ def submit(campaign):
         manifest = json.loads(manifest_path.read_text())
         entry = manifest["pretrain_entries"][0]
         if entry.get("job"):
-            jobs[slug] = dict(job=entry["job"], status="already_submitted")
-            continue
-        if digest(entry["config"]) != entry["config_sha256"]:
-            raise ValueError("Frozen config changed: " + slug)
-        manifest["python"] = sys.executable
-        write_json(manifest_path, manifest)
-        environment = dict(os.environ, EEGFM_PYTHON=sys.executable)
-        job = subprocess.check_output([sys.executable, str(controller), "submit", "--folder", str(arm)],
-                                      text=True, env=environment).strip().splitlines()[-1].split(";", 1)[0]
-        jobs[slug] = dict(job=job, status="submitted")
+            job = entry["job"]
+            status_value = "already_submitted"
+        else:
+            if digest(entry["config"]) != entry["config_sha256"]:
+                raise ValueError("Frozen config changed: " + slug)
+            manifest["python"] = sys.executable
+            manifest.setdefault("created_at_new_york", campaign.name[:11])
+            manifest.setdefault("publication_root", str(campaign / "outputs/results"))
+            write_json(manifest_path, manifest)
+            environment = dict(os.environ, EEGFM_PYTHON=sys.executable)
+            job = subprocess.check_output([sys.executable, str(controller), "submit", "--folder", str(arm)],
+                                          text=True, env=environment).strip().splitlines()[-1].split(";", 1)[0]
+            status_value = "submitted"
+        arm_jobs = dict(pretrain=job, pretrain_status=status_value)
+        if attach_downstream:
+            current = json.loads(manifest_path.read_text())
+            if current.get("downstream_jobs"):
+                arm_jobs.update(downstream_status="already_submitted",
+                                downstream={row["dataset"]: row["job"] for row in current["downstream_jobs"]},
+                                finalizer=current.get("finalizer_job"))
+            else:
+                downstream = campaign / "source/scripts/submit_experiment_downstream.py"
+                subprocess.run([sys.executable, str(downstream), "--experiment", str(arm),
+                                "--dependency", job], check=True)
+                finalizer = campaign / "source/scripts/finalize_experiment.py"
+                subprocess.run([sys.executable, str(finalizer), "--experiment", str(arm), "--submit"], check=True)
+                current = json.loads(manifest_path.read_text())
+                arm_jobs.update(downstream_status="submitted_gl40s_afterok",
+                                downstream={row["dataset"]: row["job"] for row in current["downstream_jobs"]},
+                                finalizer=current["finalizer_job"])
+        jobs[slug] = arm_jobs
     write_json(campaign / "accounts" / account / "submission.json",
-               dict(account=account, python=sys.executable, jobs=jobs, downstream_submitted=False))
+               dict(account=account, python=sys.executable, jobs=jobs,
+                    downstream_submitted=attach_downstream,
+                    downstream_gpu="l40s" if attach_downstream else None))
     return jobs
 
 
@@ -268,13 +303,15 @@ def main():
     parser.add_argument("action", choices=("prepare", "submit", "status"))
     parser.add_argument("--results-root", type=Path, default=DEFAULT_RESULTS)
     parser.add_argument("--campaign", type=Path)
+    parser.add_argument("--with-downstream", action="store_true",
+                        help="Attach GL40S downstream; authorized only for hk4935")
     args = parser.parse_args()
     if args.action == "prepare":
         print(prepare(args.results_root.resolve()))
         return
     if args.campaign is None:
         parser.error(args.action + " requires --campaign")
-    result = submit(args.campaign.resolve()) if args.action == "submit" else status(args.campaign.resolve())
+    result = submit(args.campaign.resolve(), args.with_downstream) if args.action == "submit" else status(args.campaign.resolve())
     print(json.dumps(result, indent=2))
 
 
