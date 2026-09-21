@@ -127,13 +127,15 @@ def prepare(results_root):
     matches = sorted(results_root.glob("*-mask55-d2-patchdim-shared-pretrain"))
     if matches:
         raise FileExistsError("Matching campaign already exists: " + ", ".join(map(str, matches)))
+    # Resolve every dependency before creating the campaign so an environment
+    # error cannot leave a directory that looks like a prepared experiment.
+    configs = resolved_configs()
+    policy = yaml.safe_load((ROOT / "configs/cluster/bigpurple_a100.yaml").read_text())["slurm"]
+    commit = source_commit()
     campaign = results_root / (new_york_stamp() + "-mask55-d2-patchdim-shared-pretrain")
     campaign.mkdir(parents=True)
     source = campaign / "source"
     launcher_sha = snapshot(source)
-    configs = resolved_configs()
-    policy = yaml.safe_load((ROOT / "configs/cluster/bigpurple_a100.yaml").read_text())["slurm"]
-    commit = source_commit()
     entries = []
     for slug, spec in configs.items():
         account = spec["account"]
