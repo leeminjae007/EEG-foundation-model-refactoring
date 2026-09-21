@@ -3,10 +3,12 @@
 from dataclasses import dataclass
 
 from src.data.datasets.bciciv2a_dataset import BCICIV2ADataset
+from src.data.datasets.bcic20203_dataset import BCIC20203Dataset
 from src.data.datasets.chb_dataset import CHBDataset
 from src.data.datasets.faced_dataset import FACEDDataset
 from src.data.datasets.hmc_dataset import HMCDataset
 from src.data.datasets.isruc_dataset import ISRUCDataset
+from src.data.datasets.mumtaz_dataset import MumtazDataset
 from src.data.datasets.physio_dataset import PhysioDataset
 from src.data.datasets.seedv_dataset import SEEDVDataset
 from src.data.datasets.siena_dataset import SienaDataset
@@ -27,10 +29,12 @@ class DatasetSpec:
 
 DATASET_SPECS = {
     "bciciv2a": DatasetSpec(BCICIV2ADataset, "multiclass", 4, 22, 800),
+    "bcic2020_3": DatasetSpec(BCIC20203Dataset, "multiclass", 5, 64, 600),
     "chb": DatasetSpec(CHBDataset, "binary", 1, 16, 2000),
     "faced": DatasetSpec(FACEDDataset, "multiclass", 9, 30, 2000),
     "hmc": DatasetSpec(HMCDataset, "multiclass", 5, 4, 6000),
     "isruc": DatasetSpec(ISRUCDataset, "multiclass", 5, 6, 6000),
+    "mumtaz": DatasetSpec(MumtazDataset, "binary", 1, 19, 1000),
     "physio": DatasetSpec(PhysioDataset, "multiclass", 4, 64, 800),
     "seed-v": DatasetSpec(SEEDVDataset, "multiclass", 5, 62, 200),
     "siena": DatasetSpec(SienaDataset, "binary", 1, 29, 2000),

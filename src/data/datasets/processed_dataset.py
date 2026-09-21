@@ -40,6 +40,7 @@ class SplitLMDBDataset(Dataset):
     stored_channel_indices = ()
     ignored_channel_names = ()
     coordinate_only_channel_names = ()
+    allow_coordinate_only_channels = False
     stored_shape = ()
     sample_rate = 200
     task = "multiclass"
@@ -105,9 +106,9 @@ class SplitLMDBDataset(Dataset):
             ],
             dtype=torch.bool,
         )
-        unresolved = self.channel_validity & (
-            ~coordinate_validity | self.channel_region_ids.lt(0)
-        )
+        unresolved = self.channel_validity & ~coordinate_validity
+        if not self.allow_coordinate_only_channels:
+            unresolved |= self.channel_validity & self.channel_region_ids.lt(0)
         if unresolved.any():
             names = [
                 name for name, missing in zip(
