@@ -32,7 +32,7 @@ def early_stopping(dataset):
 
 
 def prepare():
-    stamp = datetime.now(ZoneInfo('America/New_York')).strftime('%y%m%d-%H%M')
+    stamp = datetime.now(ZoneInfo('America/New_York')).strftime('%y%m%d-%H%M%S')
     campaign = RESULTS / f'{stamp}-gr2-d2-mask55-fixed-hp-seven-a100'
     campaign.mkdir(parents=True, exist_ok=False)
     source = campaign / 'source'
@@ -48,7 +48,8 @@ def prepare():
         for seed in SEEDS:
             template = BASE / f'configs/downstream/{dataset}_seed{seed}.yaml'
             cfg = yaml.safe_load(template.read_text())
-            if cfg['data']['dataset'] != dataset or cfg['seed'] != seed:
+            expected_dataset = 'seed-v' if dataset == 'seedv' else dataset
+            if cfg['data']['dataset'] != expected_dataset or cfg['seed'] != seed:
                 raise ValueError(f'Unexpected frozen template: {template}')
             if not Path(cfg['data']['dataset_dir']).is_dir():
                 raise FileNotFoundError(cfg['data']['dataset_dir'])
