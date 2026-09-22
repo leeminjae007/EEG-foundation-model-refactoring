@@ -55,7 +55,8 @@ def resolve_ablation(config):
         raise ValueError("pe_scope must be encoder or both")
     if settings.get("reference_fusion_gate") not in (None, "patch_feature"):
         raise ValueError("reference_fusion_gate must be patch_feature when specified")
-    if settings.get("fusion_gate_applicability") not in (None, "active", "not_applicable_encoder_replaced"):
+    if settings.get("fusion_gate_applicability") not in (None, "active", "not_applicable_encoder_replaced",
+                                                        "not_applicable_single_path"):
         raise ValueError("Unknown fusion_gate_applicability")
     if "depth" in settings and (settings["encoder"].startswith("mjde") or
                                 not isinstance(settings["depth"], int) or settings["depth"] < 1):

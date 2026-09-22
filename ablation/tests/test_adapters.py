@@ -131,6 +131,30 @@ def test_single_path_mjde_uses_six_stages_and_all_twelve_blocks(name, order):
     assert sum(p.numel() for p in core.parameters()) == expected
 
 
+@pytest.mark.parametrize('order', ['s2t', 't2s'])
+def test_three_stage_single_path_keeps_only_requested_blocks(order):
+    baseline = build_pretrain(config('encoder_mjde'), torch.device('cpu'))
+    settings = config('encoder_mjde')
+    settings['encoder']['fusion_gate'] = 'static_feature'
+    settings['ablation']['encoder'] = 'mjde_' + order + '3'
+    model = build_pretrain(settings, torch.device('cpu'))
+    core = model.backbone.encoder.core
+    original = baseline.backbone.encoder.core
+    assert core.order == order
+    assert len(core.spatial) == len(core.temporal) == 3
+    assert not hasattr(core, 'fusion_gates')
+    source = ((original.s2t_spatial, original.s2t_temporal) if order == 's2t'
+              else (original.t2s_spatial, original.t2s_temporal))
+    expected = sum(p.numel() for group in source for p in group.parameters())
+    expected += sum(p.numel() for p in original.output_norm.parameters())
+    assert sum(p.numel() for p in core.parameters()) == expected
+    visible = torch.rand(2, 19, 6) > .4
+    with torch.no_grad():
+        output = core(torch.randn(2, 19, 6, 200), visible)
+    assert output.shape == (2, 19, 6, 200)
+    assert torch.all(output[~visible] == 0)
+
+
 def test_average_mjde_keeps_both_paths_with_no_learnable_gate():
     baseline = build_pretrain(config("encoder_mjde"), torch.device("cpu"))
     model = build_pretrain(config("encoder_mjde_average"), torch.device("cpu"))

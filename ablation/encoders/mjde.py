@@ -54,6 +54,34 @@ class SinglePathMJDE(nn.Module):
         return self.output_norm(fused) * mask
 
 
+class ThreeStageSinglePathMJDE(nn.Module):
+    """Use only one original three-stage MJDE path (six blocks total)."""
+
+    def __init__(self, original, order):
+        super().__init__()
+        if order not in ('s2t', 't2s'):
+            raise ValueError('Three-stage order must be s2t or t2s')
+        self.order = order
+        if order == 's2t':
+            self.spatial = original.s2t_spatial
+            self.temporal = original.s2t_temporal
+        else:
+            self.spatial = original.t2s_spatial
+            self.temporal = original.t2s_temporal
+        self.output_norm = original.output_norm
+
+    def forward(self, tokens, visible):
+        mask = visible.unsqueeze(-1)
+        fused = tokens * mask
+        for spatial, temporal in zip(self.spatial, self.temporal):
+            if self.order == 's2t':
+                fused = temporal(spatial(fused, visible), visible)
+            else:
+                fused = spatial(temporal(fused, visible), visible)
+            fused = fused * mask
+        return self.output_norm(fused) * mask
+
+
 class AverageMJDE(nn.Module):
     """Original dual paths with a fixed element-wise 1:1 average."""
 
