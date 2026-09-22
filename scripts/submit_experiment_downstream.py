@@ -38,12 +38,12 @@ def resource_policy(source, preset, dataset):
     return result
 
 
-def prepare(experiment, checkpoint):
+def prepare(experiment, checkpoint, datasets=DATASETS):
     source = experiment / 'source'
     config_dir = experiment / 'configs/downstream'
     config_dir.mkdir(parents=True, exist_ok=True)
     entries = []
-    for dataset in DATASETS:
+    for dataset in datasets:
         for seed in SEEDS:
             prefix = TEMPLATE_PREFIX.get(dataset, 'gr9-1')
             template = source / ('configs/downstream/%s_%s_seed%d.yaml' % (prefix, dataset, seed))
@@ -75,7 +75,10 @@ def main():
     parser.add_argument('--dependency', help='Successful pretrain Slurm job ID')
     parser.add_argument('--hold', action='store_true', help='Legacy explicit hold; new launcher uses afterok')
     parser.add_argument('--prepare-only', action='store_true')
+    parser.add_argument('--datasets', nargs='+', choices=DATASETS,
+                        help='Submit only these datasets, with five seeds each')
     args = parser.parse_args()
+    datasets = tuple(dict.fromkeys(args.datasets)) if args.datasets else DATASETS
     experiment = args.experiment.resolve()
     source = experiment / 'source'
     checkpoint = (args.checkpoint or experiment / 'pretrain/checkpoint-epoch-0040.pth').resolve()
@@ -87,7 +90,7 @@ def main():
         raise ValueError('Expected numeric pretrain dependency job ID')
     if not (args.prepare_only or args.hold or args.dependency) and not checkpoint.is_file():
         raise FileNotFoundError(checkpoint)
-    entries = prepare(experiment, checkpoint)
+    entries = prepare(experiment, checkpoint, datasets)
     if args.prepare_only:
         return
     cluster = yaml.safe_load((source / 'configs/cluster/bigpurple_a100.yaml').read_text())['slurm']
@@ -96,7 +99,7 @@ def main():
     manifest.update(downstream_jobs=[], downstream_dependency=args.dependency,
                     downstream_state='dependency' if args.dependency else 'held' if args.hold else 'submitted')
     # Record each ID before attempting the next submission.
-    for dataset in DATASETS:
+    for dataset in datasets:
         policy = resource_policy(source, manifest.get('preset'), dataset)
         indices = [i for i, e in enumerate(entries) if e['dataset'] == dataset]
         command = ['sbatch', '--parsable', '--account=' + (args.account or cluster['account']),

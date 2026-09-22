@@ -22,7 +22,9 @@ if __name__ == "__main__":
     # It is deliberately distinct from the validation-selected best checkpoint
     # used for test metrics in result.json.
     final_checkpoint = output / "last.pth"
-    if final_checkpoint.is_file():
+    pretrain_path = args.experiment / "configs/pretrain.yaml"
+    pretrain_config = yaml.safe_load(pretrain_path.read_text(encoding="utf-8")) if pretrain_path.is_file() else {}
+    if final_checkpoint.is_file() and pretrain_config.get("ablation", {}).get("encoder", "mjde") == "mjde":
         subprocess.run([
             sys.executable, str(source / "scripts/visualize_fusion_gates.py"),
             "--checkpoint", str(final_checkpoint),

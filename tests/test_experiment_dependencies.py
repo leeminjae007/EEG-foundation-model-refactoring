@@ -78,6 +78,25 @@ def test_all_60_configs_preserve_common_lr_and_base_settings(tmp_path):
     assert downstream.resource_policy(folder / 'source', 'gr2-d2-static', 'tuab')['gpu'] == 'l40s'
 
 
+def test_selected_four_datasets_submit_only_twenty_l40s_seeds(tmp_path, monkeypatch):
+    folder = experiment(tmp_path)
+    manifest_path = folder / 'manifest.json'
+    manifest_path.write_text(json.dumps(dict(preset='pe-acpe')))
+    commands = []
+    monkeypatch.setattr(downstream.subprocess, 'check_output',
+                        lambda command, **kwargs: commands.append(command) or str(300 + len(commands)))
+    monkeypatch.setattr(sys, 'argv', ['submit', '--experiment', str(folder), '--dependency', '123',
+                                      '--datasets', 'chb', 'faced', 'physionet_mi', 'mentalarithmetic'])
+    downstream.main()
+    entries = json.loads((folder / 'downstream_entries.json').read_text())
+    assert len(entries) == 20
+    assert [e['dataset'] for e in entries[::5]] == ['chb', 'faced', 'physionet_mi', 'mentalarithmetic']
+    assert len(commands) == 4
+    assert all('--gpus-per-task=l40s:1' in command for command in commands)
+    assert ['--array=' + str(n) + '-' + str(n + 4) + '%60' for n in (0, 5, 10, 15)] == [
+        next(part for part in command if part.startswith('--array=')) for command in commands]
+
+
 def test_missing_or_smoke_results_never_publish(tmp_path, monkeypatch):
     folder = experiment(tmp_path)
     downstream.prepare(folder, folder / 'pretrain/checkpoint-epoch-0040.pth')
