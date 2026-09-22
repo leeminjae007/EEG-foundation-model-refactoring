@@ -38,7 +38,8 @@ def resource_policy(source, preset, dataset):
     return result
 
 
-def prepare(experiment, checkpoint, datasets=DATASETS, preset=None):
+def prepare(experiment, checkpoint, datasets=DATASETS, preset=None,
+            fixed_hyperparameters=None):
     source = experiment / 'source'
     mask55_defaults = None
     if preset == 'gr2-d2-patch-dimension-mask55' and 'hmc' in datasets:
@@ -55,12 +56,15 @@ def prepare(experiment, checkpoint, datasets=DATASETS, preset=None):
             if warmup(config):
                 raise ValueError('Downstream warmup is forbidden: ' + str(template))
             opt = config['optimization']
-            if dataset == 'hmc' and mask55_defaults is not None:
+            fixed = (fixed_hyperparameters or {}).get(dataset)
+            if fixed is None and dataset == 'hmc' and mask55_defaults is not None:
+                fixed = mask55_defaults
+            if fixed is not None:
                 for name in ('tokenizer_learning_rate', 'encoder_learning_rate',
                              'head_learning_rate'):
-                    opt[name] = mask55_defaults['learning_rate']
-                opt['weight_decay'] = mask55_defaults['weight_decay']
-                config['model']['head_dropout'] = mask55_defaults['head_dropout']
+                    opt[name] = fixed['learning_rate']
+                opt['weight_decay'] = fixed['weight_decay']
+                config['model']['head_dropout'] = fixed['head_dropout']
             if len({opt[k + '_learning_rate'] for k in ('tokenizer', 'encoder', 'head')}) != 1:
                 raise ValueError('Expected common downstream learning rate: ' + str(template))
             if dataset == 'tusz':
@@ -100,7 +104,8 @@ def main():
         raise ValueError('Expected numeric pretrain dependency job ID')
     if not (args.prepare_only or args.hold or args.dependency) and not checkpoint.is_file():
         raise FileNotFoundError(checkpoint)
-    entries = prepare(experiment, checkpoint, datasets, manifest.get('preset'))
+    entries = prepare(experiment, checkpoint, datasets, manifest.get('preset'),
+                      manifest.get('fixed_hyperparameters'))
     if args.prepare_only:
         return
     cluster = yaml.safe_load((source / 'configs/cluster/bigpurple_a100.yaml').read_text())['slurm']
