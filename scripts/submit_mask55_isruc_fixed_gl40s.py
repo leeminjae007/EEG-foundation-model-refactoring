@@ -10,10 +10,10 @@ import subprocess
 import sys
 from zoneinfo import ZoneInfo
 
-from scripts.submit_mask55_hp_grid import digest
-
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
+from scripts.submit_mask55_hp_grid import digest
+
 BASE = Path('/gpfs/data/oermannlab/users/ml10266/workspace/eegfm/results/260920-0342-gr2-d2-patch-dimension-mask55')
 RESULTS = Path('/gpfs/data/oermannlab/users/ml10266/workspace/eegfm/results')
 HP = dict(learning_rate=5e-4, weight_decay=.05, head_dropout=.3,
