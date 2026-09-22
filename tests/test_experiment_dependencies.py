@@ -93,7 +93,7 @@ def test_selected_four_datasets_submit_only_twenty_l40s_seeds(tmp_path, monkeypa
     assert [e['dataset'] for e in entries[::5]] == ['chb', 'faced', 'physionet_mi', 'mentalarithmetic']
     assert len(commands) == 4
     assert all('--gpus-per-task=l40s:1' in command for command in commands)
-    assert ['--array=' + str(n) + '-' + str(n + 4) + '%60' for n in (0, 5, 10, 15)] == [
+    assert ['--array=' + ','.join(map(str, range(n, n + 5))) + '%60' for n in (0, 5, 10, 15)] == [
         next(part for part in command if part.startswith('--array=')) for command in commands]
 
 
