@@ -173,6 +173,8 @@ def main():
     with (campaign / 'recovery-submit.lock').open('a+') as lock:
         fcntl.flock(lock, fcntl.LOCK_EX)
         manifest = read_json(manifest_path)
+        if manifest.get('siena_priority_cancelled') or manifest.get('tusz_priority_jobs'):
+            raise RuntimeError('Siena is canceled and TUSZ is managed by prioritize_mask55_hk_tusz.py; do not use the old retry launcher')
         if (manifest.get('owner') != 'hk4935' or
                 manifest.get('checkpoint_sha256') !=
                 'a5ab908bde519241b199efcc701ea1352b3fcd9da068f600549845bef65babca' or
