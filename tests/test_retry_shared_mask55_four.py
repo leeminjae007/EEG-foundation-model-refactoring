@@ -1,5 +1,6 @@
 import json
 from pathlib import Path
+import subprocess
 
 import yaml
 
@@ -45,12 +46,26 @@ def test_only_missing_seeds_are_resubmitted_once(tmp_path, monkeypatch):
 
     def fake_check_output(command, text):
         calls.append(command)
-        return '' if command[0] == 'squeue' else str(900 + len(calls))
+        if command[0] == 'sacct':
+            return ''.join(f'100_{i}|FAILED\n' for i in range(5))
+        return str(900 + len(calls))
 
     monkeypatch.setattr(retry.subprocess, 'check_output', fake_check_output)
+    monkeypatch.setattr(retry.subprocess, 'run', lambda *args, **kwargs:
+                        subprocess.CompletedProcess(args[0], 1, '', 'slurm_load_jobs error: Invalid job id specified'))
     retry.submit(stage, 'pe-ch_order', ('chb',))
     saved = json.loads((stage / 'manifest.json').read_text())
     assert saved['recovery_jobs'][0]['indices'] == [1, 2, 3, 4]
     assert len([c for c in calls if c[0] == 'sbatch']) == 2  # array + finalizer
     retry.submit(stage, 'pe-ch_order', ('chb',))
     assert len([c for c in calls if c[0] == 'sbatch']) == 2
+
+
+def test_expired_job_requires_terminal_sacct_records(monkeypatch):
+    monkeypatch.setattr(retry.subprocess, 'run', lambda *args, **kwargs:
+                        subprocess.CompletedProcess(args[0], 1, '', 'Invalid job id specified'))
+    monkeypatch.setattr(retry.subprocess, 'check_output',
+                        lambda *args, **kwargs: '123_0|FAILED\n123_1|RUNNING\n')
+    import pytest
+    with pytest.raises(RuntimeError, match='not proven terminal'):
+        retry.require_original_finished('123', {0, 1})

@@ -29,6 +29,8 @@ ARMS = {'pe-ch_order': ('hk4935', ('chb', 'faced', 'physionet_mi', 'mentalarithm
 SEEDS = {42, 696, 1001, 1234, 3407}
 CONFIG_DATASETS = {'chb': 'chb', 'faced': 'faced',
                    'physionet_mi': 'physio', 'mentalarithmetic': 'stress'}
+TERMINAL_STATES = {'COMPLETED', 'FAILED', 'CANCELLED', 'TIMEOUT', 'OUT_OF_MEMORY',
+                   'NODE_FAIL', 'PREEMPTED', 'BOOT_FAIL', 'DEADLINE'}
 
 
 def read_json(path):
@@ -51,6 +53,32 @@ def complete(entry):
                 (output / 'last.pth').is_file())
     except (OSError, ValueError, KeyError, TypeError):
         return False
+
+
+def require_original_finished(job, missing_indices):
+    """squeue rejects expired IDs; sacct must prove every seed is terminal."""
+    query = subprocess.run(['squeue', '-h', '-r', '-j', job, '-o', '%i|%T'],
+                           capture_output=True, text=True)
+    if query.returncode and 'Invalid job id specified' not in query.stderr:
+        raise RuntimeError('Cannot inspect original Slurm job ' + job + ': ' + query.stderr.strip())
+    active = {int(line.split('|')[0].rsplit('_', 1)[1]) for line in query.stdout.splitlines()
+              if line.split('|')[0].rsplit('_', 1)[-1].isdigit()}
+    if active.intersection(missing_indices):
+        raise RuntimeError('Original job ' + job + ' still has active missing seeds')
+    history = subprocess.check_output(
+        ['sacct', '-X', '-n', '-P', '-j', job, '--format=JobID,State'], text=True)
+    states = {}
+    for line in history.splitlines():
+        fields = line.split('|')
+        if len(fields) < 2 or not fields[0].startswith(job + '_'):
+            continue
+        suffix = fields[0][len(job) + 1:]
+        if suffix.isdigit():
+            states[int(suffix)] = fields[1].split()[0]
+    unsafe = {index: states.get(index, 'MISSING_FROM_SACCT') for index in missing_indices
+              if states.get(index) not in TERMINAL_STATES}
+    if unsafe:
+        raise RuntimeError('Original Slurm tasks are not proven terminal: ' + repr(unsafe))
 
 
 def submit(stage, arm, targets):
@@ -83,12 +111,7 @@ def submit(stage, arm, targets):
             if not missing:
                 print(dataset + ': already complete')
                 continue
-            original = str(jobs[dataset]['job'])
-            active = subprocess.check_output(['squeue', '-h', '-r', '-j', original, '-o', '%i|%T'], text=True)
-            active_indices = {int(line.split('|')[0].rsplit('_', 1)[1]) for line in active.splitlines()
-                              if line.split('|')[0].rsplit('_', 1)[-1].isdigit()}
-            if any(i in active_indices for i, _ in missing):
-                raise RuntimeError(dataset + ': an original missing seed is still active')
+            require_original_finished(str(jobs[dataset]['job']), {i for i, _ in missing})
             for _, entry in missing:
                 config = yaml.safe_load(Path(entry['config']).read_text(encoding='utf-8'))
                 if (config['data']['dataset'] != CONFIG_DATASETS[dataset] or
