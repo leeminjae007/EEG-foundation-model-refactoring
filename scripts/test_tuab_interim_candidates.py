@@ -122,8 +122,8 @@ def worker(stage):
     config = yaml.safe_load(config_path.read_text())
     if config['data']['dataset'] != 'tuab' or config['seed'] != 42:
         raise ValueError('Unexpected test config')
-    device, _, world = setup('cuda', False, config['seed'], config['runtime']['deterministic'],
-                             not config['runtime']['deterministic'], False)
+    # Match the frozen run_finetune downstream setup, not pretrain runtime keys.
+    device, _, world = setup('cuda', False, config['seed'], False, False, True)
     torch.ones(1, device=device).sum().item()
     model = build_finetune(config).to(device)
     model.load_state_dict(torch.load(checkpoint, map_location=device), strict=True)
