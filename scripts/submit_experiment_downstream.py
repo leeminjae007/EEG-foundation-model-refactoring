@@ -65,6 +65,8 @@ def prepare(experiment, checkpoint, datasets=DATASETS, preset=None,
                     opt[name] = fixed['learning_rate']
                 opt['weight_decay'] = fixed['weight_decay']
                 config['model']['head_dropout'] = fixed['head_dropout']
+                if fixed.get('early_stopping') is not None:
+                    opt['early_stopping'] = fixed['early_stopping']
             if len({opt[k + '_learning_rate'] for k in ('tokenizer', 'encoder', 'head')}) != 1:
                 raise ValueError('Expected common downstream learning rate: ' + str(template))
             if dataset == 'tusz':
