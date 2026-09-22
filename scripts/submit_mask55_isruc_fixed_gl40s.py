@@ -1,8 +1,9 @@
-"""Launch a five-seed mask55 ISRUC fixed-HP experiment on GL40S."""
+"""Launch a five-seed mask55 ISRUC or SEED-V fixed-HP experiment on GL40S."""
 
 from __future__ import annotations
 
 from datetime import datetime
+import argparse
 import json
 from pathlib import Path
 import shutil
@@ -26,8 +27,12 @@ def write_json(path, value):
 
 
 def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--dataset', choices=('isruc', 'seedv'), default='isruc')
+    args = parser.parse_args()
+    dataset = args.dataset
     stamp = datetime.now(ZoneInfo('America/New_York')).strftime('%y%m%d-%H%M%S')
-    campaign = RESULTS / f'{stamp}-gr2-d2-mask55-isruc-lr5e-4-wd5e-2-drop03-five-gl40s'
+    campaign = RESULTS / f'{stamp}-gr2-d2-mask55-{dataset}-lr5e-4-wd5e-2-drop03-five-gl40s'
     verified = json.loads((BASE / 'pretrain/verified.json').read_text())
     checkpoint = Path(verified['checkpoint'])
     if (not verified.get('strict_load') or verified.get('partial_epoch_smoke') or
@@ -43,13 +48,13 @@ def main():
         status='prepared', created_at_new_york=stamp, source_pretrain=str(BASE),
         publication_root=str(campaign / 'published'),
         checkpoint=str(checkpoint), checkpoint_sha256=verified['sha256'],
-        datasets=['isruc'], seeds=[42, 696, 1001, 1234, 3407],
-        fixed_hyperparameters={'isruc': HP},
+        datasets=[dataset], seeds=[42, 696, 1001, 1234, 3407],
+        fixed_hyperparameters={dataset: HP},
         selection='Per-seed validation balanced accuracy; test reporting only'))
     subprocess.run([
         sys.executable, str(ROOT / 'scripts/submit_experiment_downstream.py'),
         '--experiment', str(campaign), '--checkpoint', str(checkpoint),
-        '--datasets', 'isruc'], check=True)
+        '--datasets', dataset], check=True)
     subprocess.run([sys.executable, str(ROOT / 'scripts/finalize_experiment.py'),
                     '--experiment', str(campaign), '--submit'], check=True)
     manifest = json.loads((campaign / 'manifest.json').read_text())
