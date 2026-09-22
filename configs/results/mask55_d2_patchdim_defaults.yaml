@@ -1,0 +1,19 @@
+# User-designated defaults for the verified mask-55, depth-2 patch-dimension model.
+# Per-seed checkpoints must still be selected solely by validation balanced accuracy.
+# This HMC choice is user-designated after viewing five-seed test reports, not
+# asserted to be the validation-grid winner.
+pretrain:
+  campaign: /gpfs/data/oermannlab/users/ml10266/workspace/eegfm/results/260920-0342-gr2-d2-patch-dimension-mask55
+  checkpoint: /gpfs/data/oermannlab/users/ml10266/workspace/eegfm/results/260920-0342-gr2-d2-patch-dimension-mask55/pretrain/checkpoint-epoch-0040.pth
+  masking_ratio: 0.55
+  depth: 2
+  geometry: patch-dimension
+downstream:
+  hmc:
+    candidate_id: f80de04f7907
+    seeds: [42, 696, 1001, 1234, 3407]
+    learning_rate: 0.00005
+    weight_decay: 0.005
+    head_dropout: 0.3
+    source_campaign: /gpfs/data/oermannlab/users/ml10266/workspace/eegfm/results/l40s-earlystop-replacements/260921-1738-gr2-d2-mask55-isruc-hmc-siena-grid
+    selection: user-designated fixed default; per-seed checkpoints selected by validation balanced accuracy
