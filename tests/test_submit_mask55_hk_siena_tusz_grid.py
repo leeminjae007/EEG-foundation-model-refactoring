@@ -28,7 +28,13 @@ def test_prepare_and_submit_freezes_binary_five_seed_grid(tmp_path, monkeypatch)
     monkeypatch.setattr(grid, 'BASE', base)
     monkeypatch.setattr(grid, 'CAMPAIGN', campaign)
     monkeypatch.setattr(grid, 'EXPECTED_SHA256', digest)
-    monkeypatch.setattr(grid.shutil, 'copytree', lambda source, destination, ignore: Path(destination).mkdir())
+    def fake_copytree(source, destination, ignore):
+        cluster = Path(destination) / 'configs/cluster'
+        cluster.mkdir(parents=True)
+        (cluster / 'bigpurple_a100.yaml').write_text(yaml.safe_dump(
+            {'slurm': {'pretrain': {'excluded_nodes': ['a100-4011', 'a100-4024']}}}))
+
+    monkeypatch.setattr(grid.shutil, 'copytree', fake_copytree)
     grid.prepare()
     entries = json.loads((campaign / 'downstream_entries.json').read_text())
     assert len(entries) == 360
@@ -50,6 +56,7 @@ def test_prepare_and_submit_freezes_binary_five_seed_grid(tmp_path, monkeypatch)
     grid.submit(campaign)
     assert len(calls) == 3  # Siena array, TUSZ array, CPU aggregate.
     assert all('--gpus-per-task=a100:1' in call for call in calls[:2])
+    assert all('--exclude=a100-4011,a100-4024' in call for call in calls[:2])
     assert '--array=' + ','.join(map(str, range(180))) + '%5' in calls[0]
     assert '--array=' + ','.join(map(str, range(180, 360))) + '%5' in calls[1]
     manifest = json.loads((campaign / 'manifest.json').read_text())

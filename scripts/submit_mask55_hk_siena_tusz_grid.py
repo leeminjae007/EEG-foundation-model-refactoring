@@ -83,6 +83,7 @@ def prepare():
     if len(candidates()) != 36 or len(entries) != 360:
         raise AssertionError('Expected two datasets x 36 candidates x five seeds')
     write_json(CAMPAIGN / 'downstream_entries.json', entries)
+    cluster = yaml.safe_load((source / 'configs/cluster/bigpurple_a100.yaml').read_text())['slurm']
     write_json(CAMPAIGN / 'manifest.json', dict(
         owner='hk4935', status='prepared', base_experiment=str(BASE),
         checkpoint=str(checkpoint), checkpoint_sha256=EXPECTED_SHA256,
@@ -92,7 +93,8 @@ def prepare():
         selection='Five-seed mean validation balanced accuracy only',
         test_policy='Test BAcc/AUROC/AUPRC reporting only; no test-driven selection',
         resources=dict(gpu='a100', partitions='a100_dev,a100_short,a100_long',
-                       concurrency_per_dataset=5, time_limits=TIME_LIMITS)))
+                       concurrency_per_dataset=5, time_limits=TIME_LIMITS,
+                       excluded_nodes=cluster['pretrain']['excluded_nodes'])))
     return CAMPAIGN
 
 
@@ -119,12 +121,14 @@ def submit(campaign):
                    '--array=' + ','.join(map(str, indices)) + '%5',
                    '--chdir=' + str(campaign / 'source'),
                    '--output=' + str(logs / f'{dataset}-%A_%a.out'),
-                   '--error=' + str(logs / f'{dataset}-%A_%a.err'),
-                   '--wrap=exec ' + shlex.join([
+                   '--error=' + str(logs / f'{dataset}-%A_%a.err')]
+        if resources.get('excluded_nodes'):
+            command.append('--exclude=' + ','.join(resources['excluded_nodes']))
+        command.append('--wrap=exec ' + shlex.join([
                        'srun', '--ntasks=1', '--gpus-per-task=a100:1', '--gpu-bind=single:1',
                        '--kill-on-bad-exit=1', sys.executable,
                        str(campaign / 'source/scripts/downstream_experiment_worker.py'),
-                       '--experiment', str(campaign), '--source', str(campaign / 'source')])]
+                       '--experiment', str(campaign), '--source', str(campaign / 'source')]))
         job = subprocess.check_output(command, text=True).strip().split(';', 1)[0]
         manifest['jobs'].append(dict(dataset=dataset, job=job, indices=indices))
         manifest['status'] = 'submitting'
