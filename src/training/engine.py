@@ -220,6 +220,11 @@ def build_finetune(config):
             weights[key] = value
     backbone.load_state_dict(weights, strict=True)
     spec = get_dataset_spec(config["data"]["dataset"])
+    if "ablation" in pretrain:
+        # The checkpoint was pretrained with its own channel montage.  Named
+        # channel PE and CSBrain's region masks are non-persistent runtime
+        # state, so bind the downstream montage after strict weight loading.
+        backbone.set_channels(spec.dataset_class.channel_names, config["data"]["dataset"])
     patches = spec.signal_length // pretrain["patch_encoder"]["patch_samples"]
     head = config["model"]
     if config["data"]["dataset"] == "isruc":

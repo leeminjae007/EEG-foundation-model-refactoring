@@ -63,6 +63,40 @@ def test_sleep_head_keeps_sequence_dimension(tmp_path):
         assert logits.shape == (1, 2, 5)
 
 
+@pytest.mark.parametrize("arm,dataset,channels,signal_length", [
+    ("pe_channel_id", "faced", 30, 2000),
+    ("encoder_csbrain", "chb", 16, 2000),
+])
+def test_direct_downstream_factory_rebinds_montage(tmp_path, arm, dataset, channels, signal_length):
+    """The shared four-task launcher calls the direct factory, not connected_engine."""
+    from src.training import engine
+    from src.data.electrode_geometry import resolve_channel_coordinates
+
+    settings = resolve_ablation(load_config("ablation/configs/" + arm + ".yaml"))
+    if "depth" in settings["ablation"]:
+        settings["ablation"]["depth"] = 1
+    pretrained = build_pretrain(settings, torch.device("cpu"))
+    path = tmp_path / "pretrain.pth"
+    torch.save({"model": pretrained.state_dict(), "config": settings}, path)
+    downstream = load_config(f"configs/downstream/gr9-1_{dataset}_seed42.yaml")
+    downstream["model"]["checkpoint"] = str(path)
+
+    model = engine.build_finetune(downstream).eval()
+    names = engine.get_dataset_spec(dataset).dataset_class.channel_names
+    coordinates, valid = resolve_channel_coordinates(names)
+    assert len(names) == channels
+    if arm == "pe_channel_id":
+        assert model.backbone.position.indices.numel() == channels
+    else:
+        assert len(model.backbone.encoder.core.core.sorted_indices) == channels
+        assert max(model.backbone.encoder.core.core.sorted_indices) < channels
+    with torch.no_grad():
+        logits = model(torch.randn(1, channels, signal_length), coordinates[None], valid[None])
+    expected = ((1,) if engine.get_dataset_spec(dataset).num_outputs == 1
+                else (1, engine.get_dataset_spec(dataset).num_outputs))
+    assert logits.shape == expected
+
+
 def test_real_engine_pretrain_resume_and_downstream_evaluation(tmp_path, monkeypatch):
     """Exercise the unmodified data loader, optimizer, scheduler and checkpoint IO."""
     import json
