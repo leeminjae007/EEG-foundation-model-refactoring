@@ -9,6 +9,7 @@ import torch
 import yaml
 
 from scripts import submit_experiment_downstream as downstream
+from scripts import submit_shared_mask55_four as shared_four
 from scripts import submit_experiment_smoke as smoke
 from scripts import finalize_experiment
 from src.training.smoke import TimedSmoke, LimitedLoader
@@ -95,6 +96,19 @@ def test_selected_four_datasets_submit_only_twenty_l40s_seeds(tmp_path, monkeypa
     assert all('--gpus-per-task=l40s:1' in command for command in commands)
     assert ['--array=' + ','.join(map(str, range(n, n + 5))) + '%60' for n in (0, 5, 10, 15)] == [
         next(part for part in command if part.startswith('--array=')) for command in commands]
+
+
+def test_shared_four_pretrain_dependency_requires_success_or_active_job(tmp_path, monkeypatch):
+    original = tmp_path / 'original'
+    (original / 'pretrain').mkdir(parents=True)
+    (original / 'manifest.json').write_text(json.dumps({'pretrain_entries': [{'job': '123'}]}))
+    monkeypatch.setattr(shared_four.subprocess, 'check_output', lambda *a, **k: '123|RUNNING\n')
+    assert shared_four.pretrain_dependency(original)[0] == '123'
+    monkeypatch.setattr(shared_four.subprocess, 'check_output', lambda *a, **k: '123|COMPLETED\n')
+    with pytest.raises(RuntimeError, match='verified checkpoint'):
+        shared_four.pretrain_dependency(original)
+    (original / 'pretrain/verified.json').write_text('{}')
+    assert shared_four.pretrain_dependency(original)[0] is None
 
 
 def test_missing_or_smoke_results_never_publish(tmp_path, monkeypatch):

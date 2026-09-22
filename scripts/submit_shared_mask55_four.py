@@ -5,6 +5,7 @@ Run from a collaborator's activated environment in ml10266's shared checkout:
     python scripts/submit_shared_mask55_four.py encoder
 """
 import argparse
+import getpass
 import hashlib
 import json
 from pathlib import Path
@@ -31,16 +32,18 @@ def read_json(path):
 
 def pretrain_dependency(original):
     manifest = read_json(original / 'manifest.json')
-    if (original / 'pretrain/verified.json').is_file():
-        return None, manifest
     job = manifest['pretrain_entries'][0]['job']
     state = subprocess.check_output(
         ['sacct', '-X', '-j', job, '--format=JobIDRaw,State', '-P', '-n'], text=True)
     matching = [line.split('|')[1].split()[0] for line in state.splitlines()
                 if line.split('|')[0] == job]
-    if len(matching) != 1 or matching[0] not in ('PENDING', 'RUNNING', 'CONFIGURING', 'COMPLETING'):
-        raise RuntimeError('%s: pretrain is not active and has no verified checkpoint: %s' % (original, state))
-    return job, manifest
+    if len(matching) != 1:
+        raise RuntimeError('%s: cannot identify pretrain Slurm state: %s' % (original, state))
+    if matching[0] == 'COMPLETED' and (original / 'pretrain/verified.json').is_file():
+        return None, manifest
+    if matching[0] in ('PENDING', 'RUNNING', 'CONFIGURING', 'COMPLETING'):
+        return job, manifest
+    raise RuntimeError('%s: pretrain did not complete with a verified checkpoint: %s' % (original, state))
 
 
 def prepare_stage(campaign, owner, arm, encoder, position):
@@ -92,10 +95,13 @@ def submit(stage, dependency):
 
 
 def main():
-    parser = argparse.ArgumentParser(description=__doc__)
+    parser = argparse.ArgumentParser(description='Submit four five-seed L40S datasets for one shared pretrain group.')
     parser.add_argument('group', choices=GROUPS)
     parser.add_argument('--campaign', type=Path, default=CAMPAIGN)
     args = parser.parse_args()
+    expected_account = GROUPS[args.group][0][0]
+    if getpass.getuser() != expected_account:
+        parser.error('%s group must be submitted by %s' % (args.group, expected_account))
     for owner, arm, encoder, position in GROUPS[args.group]:
         stage, dependency = prepare_stage(args.campaign, owner, arm, encoder, position)
         submit(stage, dependency)
