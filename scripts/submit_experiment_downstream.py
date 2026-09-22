@@ -38,8 +38,12 @@ def resource_policy(source, preset, dataset):
     return result
 
 
-def prepare(experiment, checkpoint, datasets=DATASETS):
+def prepare(experiment, checkpoint, datasets=DATASETS, preset=None):
     source = experiment / 'source'
+    mask55_defaults = None
+    if preset == 'gr2-d2-patch-dimension-mask55' and 'hmc' in datasets:
+        defaults_path = source / 'configs/results/mask55_d2_patchdim_defaults.yaml'
+        mask55_defaults = yaml.safe_load(defaults_path.read_text())['downstream']['hmc']
     config_dir = experiment / 'configs/downstream'
     config_dir.mkdir(parents=True, exist_ok=True)
     entries = []
@@ -51,6 +55,12 @@ def prepare(experiment, checkpoint, datasets=DATASETS):
             if warmup(config):
                 raise ValueError('Downstream warmup is forbidden: ' + str(template))
             opt = config['optimization']
+            if dataset == 'hmc' and mask55_defaults is not None:
+                for name in ('tokenizer_learning_rate', 'encoder_learning_rate',
+                             'head_learning_rate'):
+                    opt[name] = mask55_defaults['learning_rate']
+                opt['weight_decay'] = mask55_defaults['weight_decay']
+                config['model']['head_dropout'] = mask55_defaults['head_dropout']
             if len({opt[k + '_learning_rate'] for k in ('tokenizer', 'encoder', 'head')}) != 1:
                 raise ValueError('Expected common downstream learning rate: ' + str(template))
             if dataset == 'tusz':
@@ -90,7 +100,7 @@ def main():
         raise ValueError('Expected numeric pretrain dependency job ID')
     if not (args.prepare_only or args.hold or args.dependency) and not checkpoint.is_file():
         raise FileNotFoundError(checkpoint)
-    entries = prepare(experiment, checkpoint, datasets)
+    entries = prepare(experiment, checkpoint, datasets, manifest.get('preset'))
     if args.prepare_only:
         return
     cluster = yaml.safe_load((source / 'configs/cluster/bigpurple_a100.yaml').read_text())['slurm']
