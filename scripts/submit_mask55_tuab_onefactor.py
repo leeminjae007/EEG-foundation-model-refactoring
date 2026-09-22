@@ -131,16 +131,18 @@ def retry_failed(campaign, indices, excluded_nodes):
     """Retry only terminal failures, leaving active and completed entries untouched."""
     manifest_path = campaign / 'manifest.json'
     manifest = json.loads(manifest_path.read_text())
-    if len(manifest['jobs']) != 1 or manifest.get('retry_job'):
-        raise ValueError('Expected one original array and no existing retry')
+    if len(manifest['jobs']) != 1:
+        raise ValueError('Expected exactly one original array')
     original = manifest['jobs'][0]['job']
+    previous = manifest.get('retry_job') or original
+    retry_jobs = list(manifest.get('retry_jobs') or ([previous] if previous != original else []))
     entries = json.loads((campaign / 'downstream_entries.json').read_text())
     if not indices or len(indices) != len(set(indices)) or not set(indices) < set(range(len(entries))):
         raise ValueError('Invalid retry indices')
     if not excluded_nodes:
         raise ValueError('GPU-failing nodes must be excluded')
     for index in indices:
-        state = subprocess.check_output(['sacct', '-X', '-n', '-j', f'{original}_{index}',
+        state = subprocess.check_output(['sacct', '-X', '-n', '-j', f'{previous}_{index}',
                                          '--format=State'], text=True).strip()
         if state != 'FAILED':
             raise ValueError(f'Index {index} is not a terminal failure: {state!r}')
@@ -148,17 +150,20 @@ def retry_failed(campaign, indices, excluded_nodes):
         if (output / 'result.json').exists() or list(output.glob('*.pth')):
             raise ValueError(f'Index {index} has training output and needs individual review')
     command = list(manifest['jobs'][0]['command'])
-    command[command.index('--array=0-11%5')] = '--array=' + ','.join(map(str, indices)) + '%5'
+    array_position = next(i for i, argument in enumerate(command) if argument.startswith('--array='))
+    command[array_position] = '--array=' + ','.join(map(str, indices)) + '%5'
     command.insert(-1, '--exclude=' + ','.join(excluded_nodes))
     retry = subprocess.check_output(command, text=True).strip().split(';', 1)[0]
-    manifest.update(retry_job=retry, retry_indices=indices, retry_excluded_nodes=excluded_nodes)
+    retry_jobs.append(retry)
+    manifest.update(retry_job=retry, retry_jobs=retry_jobs,
+                    retry_indices=indices, retry_excluded_nodes=excluded_nodes)
     write_json(manifest_path, manifest)
     subprocess.run(['scancel', manifest['finalizer_job']], check=True)
     logs = campaign / 'logs'
     finalizer = subprocess.check_output([
         'sbatch', '--parsable', '--account=system', '--job-name=mask55-tuab-onefactor-results',
         '--partition=cpu_short,cpu_long', '--nodes=1', '--ntasks=1', '--cpus-per-task=1',
-        '--mem=4G', '--time=00:30:00', '--dependency=afterany:' + original + ':' + retry,
+        '--mem=4G', '--time=00:30:00', '--dependency=afterany:' + ':'.join([original] + retry_jobs),
         '--output=' + str(logs / 'aggregate-%j.out'),
         '--error=' + str(logs / 'aggregate-%j.err'),
         '--wrap=exec ' + shlex.join([
