@@ -17,16 +17,43 @@ def test_retryable_indices_uses_only_terminal_missing_entries(monkeypatch):
 def test_pending_original_excludes_bad_nodes(monkeypatch):
     calls = []
 
-    def fake_run(command, check):
+    class Success:
+        returncode = 0
+
+    def fake_run(command, capture_output, text):
         calls.append(command)
+        return Success()
 
     monkeypatch.setattr(retry.subprocess, 'run', fake_run)
     monkeypatch.setattr(retry.subprocess, 'check_output',
                         lambda command, text: 'JobId=27681546_2 ExcNodeList=a100-4011,a100-4024')
+    monkeypatch.setattr(retry, 'task_states', lambda job: {2: 'PENDING', 3: 'RUNNING'})
     retry.exclude_pending_original('27681546', {2: 'PENDING', 3: 'RUNNING'},
                                    ['a100-4011', 'a100-4024'])
-    assert calls == [['scontrol', 'update', 'JobId=27681546',
+    assert calls == [['scontrol', 'update', 'JobId=27681546_2',
                       'ExcNodeList=a100-4011,a100-4024']]
+
+
+def test_pending_update_tolerates_task_start_race(monkeypatch):
+    calls = []
+
+    class Result:
+        def __init__(self, code):
+            self.returncode = code
+            self.stderr = 'Job is no longer pending execution'
+
+    def fake_run(command, capture_output, text):
+        calls.append(command)
+        return Result(1 if '27681546_2' in command[2] else 0)
+
+    monkeypatch.setattr(retry.subprocess, 'run', fake_run)
+    monkeypatch.setattr(retry, 'task_states',
+                        lambda job: {2: 'RUNNING', 3: 'PENDING'})
+    monkeypatch.setattr(retry.subprocess, 'check_output',
+                        lambda command, text: 'JobId=27681546_3 ExcNodeList=a100-4011')
+    retry.exclude_pending_original('27681546', {2: 'PENDING', 3: 'PENDING'},
+                                   ['a100-4011'])
+    assert calls[-1][2] == 'JobId=27681546_3'
 
 
 def test_probe_and_retry_wait_for_cuda(tmp_path, monkeypatch):

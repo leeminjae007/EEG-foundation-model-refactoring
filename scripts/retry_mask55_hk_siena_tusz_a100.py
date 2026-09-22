@@ -74,16 +74,37 @@ def retryable_indices(entries, dataset, original_states, prior):
 
 
 def exclude_pending_original(job, states, nodes):
-    pending = [index for index, state in states.items() if state == 'PENDING']
+    pending = sorted(index for index, state in states.items() if state == 'PENDING')
     if not pending:
         return
-    subprocess.run(['scontrol', 'update', 'JobId=' + job,
-                    'ExcNodeList=' + ','.join(nodes)], check=True)
-    # Verify one pending array element, rather than trusting only exit code.
-    shown = subprocess.check_output(['scontrol', 'show', 'job',
-                                     f'{job}_{pending[0]}'], text=True)
-    if 'ExcNodeList=(null)' in shown or 'ExcNodeList=' not in shown:
-        raise RuntimeError('Slurm did not retain the excluded nodes for ' + job)
+    exclusion = 'ExcNodeList=' + ','.join(nodes)
+    # Updating the array base also targets running elements. Slurm rejects those
+    # with "Job is no longer pending execution" and may apply only some changes.
+    for start in range(0, len(pending), 20):
+        group = pending[start:start + 20]
+        ids = [f'{job}_{index}' for index in group]
+        batch = subprocess.run(['scontrol', 'update', 'JobId=' + ','.join(ids),
+                                exclusion], capture_output=True, text=True)
+        if batch.returncode:
+            # A task can start between squeue and scontrol. Retry only pending
+            # children individually; never touch a now-running allocation.
+            for element in ids:
+                updated = subprocess.run(['scontrol', 'update', 'JobId=' + element,
+                                          exclusion], capture_output=True, text=True)
+                if updated.returncode:
+                    current = task_states(job).get(int(element.rsplit('_', 1)[1]))
+                    if current == 'PENDING':
+                        raise RuntimeError(f'Could not exclude bad nodes for {element}: '
+                                           + updated.stderr.strip())
+    # Do not assume a partly successful Slurm update covered every child.
+    current_states = task_states(job)
+    for index in pending:
+        if current_states.get(index) != 'PENDING':
+            continue
+        shown = subprocess.check_output(['scontrol', 'show', 'job',
+                                         f'{job}_{index}'], text=True)
+        if exclusion not in shown:
+            raise RuntimeError(f'Slurm did not retain excluded nodes for {job}_{index}')
 
 
 def submit_probe(logs, nodes, account):
