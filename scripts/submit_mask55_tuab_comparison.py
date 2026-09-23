@@ -32,14 +32,14 @@ STAGE3 = common.STAGE3
 OWNER4 = Path('/gpfs/data/oermannlab/users/ml10266/workspace/eegfm/results/260923-0033-mask55-d2-patchdim-owner-encoder-four-pretrain')
 ARMS = {
     'hk4935': {
-        'pe-ch_order': (SHARED / 'accounts/hk4935/pe-ch_order', 'a100'),
-        'pe-acpe': (SHARED / 'accounts/hk4935/pe-acpe', 'a100'),
-        'pe-4dREVE': (SHARED / 'accounts/hk4935/pe-4dREVE', 'a100'),
+        'pe-ch_order': (SHARED / 'accounts/hk4935/pe-ch_order', 'gl40s'),
+        'pe-acpe': (SHARED / 'accounts/hk4935/pe-acpe', 'gl40s'),
+        'pe-4dREVE': (SHARED / 'accounts/hk4935/pe-4dREVE', 'gl40s'),
     },
     'yc8820': {
-        'cbramod': (SHARED / 'accounts/yc8820/cbramod', 'a100'),
-        'csbrain': (SHARED / 'accounts/yc8820/csbrain', 'a100'),
-        'labram': (SHARED / 'accounts/yc8820/labram', 'a100'),
+        'cbramod': (SHARED / 'accounts/yc8820/cbramod', 'gl40s'),
+        'csbrain': (SHARED / 'accounts/yc8820/csbrain', 'gl40s'),
+        'labram': (SHARED / 'accounts/yc8820/labram', 'gl40s'),
         'enc-s2t-3stage': (STAGE3 / 'accounts/yc8820/s2t3', 'gl40s'),
         'enc-t2s-3stage': (STAGE3 / 'accounts/yc8820/t2s3', 'gl40s'),
     },
