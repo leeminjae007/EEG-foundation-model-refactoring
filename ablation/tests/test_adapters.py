@@ -201,7 +201,7 @@ def test_invalid_config_is_not_silently_ignored():
 
 
 @pytest.mark.parametrize("dataset", ["bciciv2a", "chb", "faced", "hmc", "isruc", "physio",
-                                     "seed-v", "siena", "stress", "tuab", "tuev"])
+                                     "seed-v", "siena", "stress", "tuab", "tuev", "tusz"])
 def test_csbrain_downstream_montages_and_short_sequences(dataset):
     from src.data.datasets.registry import get_dataset_spec
     settings = config("encoder_csbrain")

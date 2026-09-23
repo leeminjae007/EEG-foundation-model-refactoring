@@ -5,7 +5,7 @@ from functools import lru_cache
 
 from ablation.sources import VENDOR
 
-DATASETS = {"seed-v": "seedv"}
+DATASETS = {"seed-v": "seedv", "tusz": "pretrain"}
 
 
 def canonical(name):
@@ -15,8 +15,9 @@ def canonical(name):
 
 @lru_cache(maxsize=None)
 def source_metadata(dataset):
-    path = VENDOR / "csbrain" / ("pretrain_main.py" if dataset == "pretrain" else
-                                "models/model_for_" + DATASETS.get(dataset, dataset) + ".py")
+    source = DATASETS.get(dataset, dataset)
+    path = VENDOR / "csbrain" / ("pretrain_main.py" if source == "pretrain" else
+                                "models/model_for_" + source + ".py")
     values = {}
     for node in ast.walk(ast.parse(path.read_text(encoding="utf-8"))):
         if isinstance(node, ast.Assign) and len(node.targets) == 1 and isinstance(node.targets[0], ast.Name):
