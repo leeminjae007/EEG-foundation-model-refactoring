@@ -1,8 +1,6 @@
-"""Submit ten final-default five-seed downstream datasets for owner mask55 ablations.
+"""Submit ten final-default five-seed datasets for verified owner mask55 arms.
 
-TUAB is managed separately by submit_mask55_tuab_comparison.py. If the
-enc-average-3s pretrain is still running, a CPU callback submits its ten
-datasets only after the pretrain job succeeds and the checkpoint verifies.
+TUAB is submitted separately by submit_mask55_tuab_comparison.py.
 """
 
 from __future__ import annotations
@@ -27,7 +25,7 @@ from scripts import submit_mask55_final_comparison as common
 from scripts.submit_experiment_downstream import prepare
 
 OWNER4 = Path('/gpfs/data/oermannlab/users/ml10266/workspace/eegfm/results/260923-0033-mask55-d2-patchdim-owner-encoder-four-pretrain')
-ARMS = ('ours-lite', 'enc-average-3s')
+ARMS = ('ours-lite', 'enc-t2s-6stage')
 DATASETS = common.DATASETS
 HP = {name: {'learning_rate': lr, 'weight_decay': wd, 'head_dropout': drop}
       for name, (lr, wd, drop) in common.HP.items()}
@@ -35,47 +33,6 @@ HP = {name: {'learning_rate': lr, 'weight_decay': wd, 'head_dropout': drop}
 
 def read_json(path: Path) -> dict:
     return json.loads(path.read_text(encoding='utf-8'))
-
-
-def pretrain_job(original: Path) -> str:
-    manifest = read_json(original / 'manifest.json')
-    job = str(manifest['pretrain_entries'][0].get('job') or '')
-    if not re.fullmatch(r'\d+', job):
-        raise ValueError(f'No numeric pretrain job: {original}')
-    return job
-
-
-def defer_average(original: Path) -> str:
-    record = original / 'ten_downstream_deferred_submission.json'
-    if record.is_file():
-        saved = read_json(record)
-        if saved.get('datasets') != list(DATASETS) or saved.get('hyperparameters') != HP:
-            raise ValueError('Existing callback has a different frozen configuration')
-        return str(saved['callback_job'])
-    dependency = pretrain_job(original)
-    if not common.slurm_active_state(dependency):
-        raise RuntimeError(f'Pretrain {dependency} is unverified and no longer active')
-    logs = original / 'logs'
-    logs.mkdir(exist_ok=True)
-    wrap = 'exec ' + shlex.join([
-        sys.executable, str(ROOT / 'scripts/submit_mask55_owner_two_downstream.py'),
-        '--arm', 'enc-average-3s',
-    ])
-    job = subprocess.check_output([
-        'sbatch', '--parsable', '--account=system', '--job-name=mask55-average-ten-after',
-        '--partition=cpu_short,cpu_long', '--nodes=1', '--ntasks=1',
-        '--cpus-per-task=1', '--mem=4G', '--time=00:20:00',
-        '--dependency=afterok:' + dependency, '--kill-on-invalid-dep=yes',
-        '--output=' + str(logs / 'ten-deferred-%j.out'),
-        '--error=' + str(logs / 'ten-deferred-%j.err'), '--wrap=' + wrap,
-    ], text=True).strip().split(';', 1)[0]
-    if not re.fullmatch(r'\d+', job):
-        raise ValueError(f'Unexpected callback job: {job}')
-    record.write_text(json.dumps({
-        'pretrain_job': dependency, 'callback_job': job,
-        'datasets': list(DATASETS), 'hyperparameters': HP,
-    }, indent=2) + '\n', encoding='utf-8')
-    return job
 
 
 def prepare_stage(original: Path, arm: str) -> tuple[Path, list[dict]]:
@@ -177,9 +134,6 @@ def main() -> None:
     for arm in (args.arm,) if args.arm else ARMS:
         original = OWNER4 / arm
         if not (original / 'pretrain/verified.json').is_file():
-            if arm == 'enc-average-3s':
-                print(f'{arm}: afterok pretrain callback {defer_average(original)}', flush=True)
-                continue
             raise FileNotFoundError(f'No verified pretrain for {arm}: {original}')
         stage, entries = prepare_stage(original, arm)
         submitted = submit_stage(stage, entries, arm)

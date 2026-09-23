@@ -6,7 +6,7 @@ def test_tuab_comparison_assignments_and_hp():
     assert len(campaign.ARMS['hk4935']) == 3
     assert len(campaign.ARMS['yc8820']) == 5
     assert len(campaign.ARMS['ml10266']) == 2
-    assert campaign.ARMS['ml10266']['enc-average-3s'][1] == 'gl40s'
+    assert campaign.ARMS['ml10266']['enc-t2s-6stage'][1] == 'gl40s'
     assert all(gpu == 'gl40s' for account in campaign.ARMS.values()
                for _, gpu in account.values())
     assert campaign.checked_hp(5e-4, .05, .3)['early_stopping']['patience'] == 10

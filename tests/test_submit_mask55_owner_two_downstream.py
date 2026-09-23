@@ -2,7 +2,7 @@ from scripts import submit_mask55_owner_two_downstream as campaign
 
 
 def test_owner_ablation_scope_and_final_defaults():
-    assert campaign.ARMS == ('ours-lite', 'enc-average-3s')
+    assert campaign.ARMS == ('ours-lite', 'enc-t2s-6stage')
     assert len(campaign.DATASETS) == 10
     assert 'tuab' not in campaign.DATASETS
     assert 'tusl' not in campaign.DATASETS

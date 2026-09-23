@@ -2,7 +2,7 @@
 
 The owner updates the shared checkout. Collaborators activate their own CUDA
 environment and run --account hk4935/yc8820 with the agreed, common TUAB HP.
-ml10266 may defer an unfinished owner pretrain via an afterok CPU callback.
+Only verified owner pretrains are eligible for immediate submission.
 """
 
 from __future__ import annotations
@@ -45,7 +45,7 @@ ARMS = {
     },
     'ml10266': {
         'ours-lite': (OWNER4 / 'ours-lite', 'gl40s'),
-        'enc-average-3s': (OWNER4 / 'enc-average-3s', 'gl40s'),
+        'enc-t2s-6stage': (OWNER4 / 'enc-t2s-6stage', 'gl40s'),
     },
 }
 EARLY_STOPPING = {'monitor': 'balanced_accuracy', 'min_epochs': 4,
@@ -57,49 +57,6 @@ def checked_hp(lr: float, wd: float, dropout: float) -> dict:
         raise ValueError('Invalid TUAB learning rate, weight decay, or dropout')
     return {'learning_rate': lr, 'weight_decay': wd,
             'head_dropout': dropout, 'early_stopping': dict(EARLY_STOPPING)}
-
-
-def pretrain_job(original: Path) -> str:
-    manifest = json.loads((original / 'manifest.json').read_text(encoding='utf-8'))
-    job = str(manifest['pretrain_entries'][0].get('job') or '')
-    if not re.fullmatch(r'\d+', job):
-        raise ValueError(f'No active numeric pretrain job: {original}')
-    return job
-
-
-def defer_owner_arm(original: Path, arm: str, hp: dict) -> str:
-    """Let Slurm invoke this launcher only after the verified pretrain succeeds."""
-    if arm != 'enc-average-3s':
-        raise ValueError('Only the pending owner average arm may be deferred')
-    record = original / 'tuab_deferred_submission.json'
-    if record.is_file():
-        saved = json.loads(record.read_text(encoding='utf-8'))
-        if saved['hp'] != hp:
-            raise ValueError('Existing deferred TUAB HP differs')
-        return str(saved['callback_job'])
-    dependency = pretrain_job(original)
-    if not common.slurm_active_state(dependency):
-        raise RuntimeError(f'Pretrain {dependency} is not active but remains unverified')
-    logs = original / 'logs'
-    logs.mkdir(exist_ok=True)
-    command = shlex.join([
-        sys.executable, str(ROOT / 'scripts/submit_mask55_tuab_comparison.py'),
-        '--account', 'ml10266', '--arm', arm,
-        '--lr', str(hp['learning_rate']), '--wd', str(hp['weight_decay']),
-        '--dropout', str(hp['head_dropout']),
-    ])
-    job = subprocess.check_output([
-        'sbatch', '--parsable', '--account=system', '--job-name=tuab55-after-' + arm,
-        '--partition=cpu_short,cpu_long', '--nodes=1', '--ntasks=1',
-        '--cpus-per-task=1', '--mem=4G', '--time=00:20:00',
-        '--dependency=afterok:' + dependency, '--kill-on-invalid-dep=yes',
-        '--output=' + str(logs / 'tuab-deferred-%j.out'),
-        '--error=' + str(logs / 'tuab-deferred-%j.err'),
-        '--wrap=exec ' + command,
-    ], text=True).strip().split(';', 1)[0]
-    record.write_text(json.dumps({'pretrain_job': dependency, 'callback_job': job,
-                                  'hp': hp}, indent=2) + '\n', encoding='utf-8')
-    return job
 
 
 def prepare_stage(original: Path, arm: str, account: str, hp: dict) -> tuple[Path, list[dict]]:
@@ -208,9 +165,6 @@ def main() -> None:
     for arm in selected:
         original, gpu = arms[arm]
         if not (original / 'pretrain/verified.json').is_file():
-            if args.account == 'ml10266' and arm == 'enc-average-3s':
-                print(f'{arm}: afterok pretrain callback {defer_owner_arm(original, arm, hp)}', flush=True)
-                continue
             raise FileNotFoundError(f'No verified pretrain for {arm}: {original}')
         stage, entries = prepare_stage(original, arm, args.account, hp)
         print(f'{arm}: TUAB array {submit_stage(stage, entries, arm, gpu)}; results {stage}', flush=True)
