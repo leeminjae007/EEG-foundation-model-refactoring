@@ -8,6 +8,7 @@ import argparse
 import getpass
 import json
 from pathlib import Path
+import re
 import shutil
 import subprocess
 
@@ -54,6 +55,22 @@ def main() -> None:
             print(("REMOVE " if args.apply else "WOULD REMOVE ") + str(config))
             if args.apply:
                 config.unlink()
+        manifest_path = campaign / "manifest.json"
+        if manifest_path.is_file():
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            jobs = {str(entry["job"]) for entry in manifest.get("downstream_jobs", [])
+                    if entry.get("dataset") == "tusl"}
+            logs = campaign / "downstream/logs"
+            if logs.is_dir():
+                for log in logs.iterdir():
+                    if (log.is_file() and not log.is_symlink() and
+                            any(re.search(r"(?<!\d)" + re.escape(job) + r"(?!\d)", log.name)
+                                for job in jobs)):
+                        if log.resolve().parent != logs.resolve():
+                            raise ValueError(f"Unsafe log target: {log}")
+                        print(("REMOVE " if args.apply else "WOULD REMOVE ") + str(log))
+                        if args.apply:
+                            log.unlink()
         if args.apply:
             marker = campaign / "tusl-removal.json"
             marker.write_text(json.dumps(dict(dataset="tusl", removed_raw_downstream=True,
