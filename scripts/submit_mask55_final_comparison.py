@@ -26,6 +26,7 @@ sys.path.insert(0, str(ROOT))
 RESULTS = Path("/gpfs/data/oermannlab/users/ml10266/workspace/eegfm/results")
 SHARED = RESULTS / "260921-1456-mask55-d2-patchdim-shared-pretrain"
 STAGE3 = RESULTS / "260922-0923-mask55-d2-singlepath3-pretrain"
+OWNER4 = RESULTS / "260923-0033-mask55-d2-patchdim-owner-encoder-four-pretrain"
 SEEDS = (42, 696, 1001, 1234, 3407)
 DATASETS = ("chb", "tuev", "siena", "tusz", "seedv", "faced",
             "mentalarithmetic", "physionet_mi", "isruc", "hmc")
@@ -46,6 +47,7 @@ ARMS = {
                     SHARED / "accounts/hk4935/fourtask_downstream/pe-acpe", "a100", .55),
         "pe-4dREVE": (SHARED / "accounts/hk4935/pe-4dREVE",
                       SHARED / "accounts/hk4935/fourtask_downstream/pe-4dREVE", "a100", .55),
+        "enc-average-3s": (OWNER4 / "enc-average-3s", None, "gl40s", .55),
     },
     "yc8820": {
         "cbramod": (SHARED / "accounts/yc8820/cbramod",
@@ -281,14 +283,15 @@ def submit_stage(stage: Path, missing: list[dict], gpu: str, retry: bool) -> Non
         policy = resources(gpu, dataset)
         logs = stage / "downstream/logs"
         logs.mkdir(parents=True, exist_ok=True)
-        wrap = shlex.join(["srun", "--ntasks=1", f"--gpus-per-task={gpu}:1",
+        slurm_gpu = "l40s" if gpu == "gl40s" else gpu
+        wrap = shlex.join(["srun", "--ntasks=1", f"--gpus-per-task={slurm_gpu}:1",
                             "--gpu-bind=single:1", "--kill-on-bad-exit=1",
                             sys.executable, str(ROOT / "scripts/downstream_experiment_worker.py"),
                             "--experiment", str(stage)])
         command = ["sbatch", "--parsable", "--account=system",
                    "--job-name=final-" + stage.name + "-" + dataset,
                    "--partition=" + policy["partitions"], "--nodes=1", "--ntasks=1",
-                   f"--gpus-per-task={gpu}:1", "--cpus-per-task=4", "--mem=32G",
+                   f"--gpus-per-task={slurm_gpu}:1", "--cpus-per-task=4", "--mem=32G",
                    "--time=" + policy["time"],
                    "--array=" + ",".join(str(r["index"]) for r in current) + "%5",
                    "--output=" + str(logs / "%A_%a.out"),
@@ -312,19 +315,27 @@ def submit_stage(stage: Path, missing: list[dict], gpu: str, retry: bool) -> Non
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--account", required=True, choices=ARMS)
+    parser.add_argument("--arm", help="Submit only one assigned comparison arm")
     parser.add_argument("--plan", action="store_true")
     parser.add_argument("--retry", action="store_true",
                         help="After previous arrays finish, resubmit only still-missing seeds")
     args = parser.parse_args()
+    if args.arm and args.arm not in ARMS[args.account]:
+        parser.error(f"{args.arm} is not assigned to {args.account}")
+    # Preserve the existing account-wide launch behavior; the owner-pretrained
+    # average arm is intentionally opt-in through --arm after verification.
+    arms = ([args.arm] if args.arm else
+            [arm for arm in ARMS[args.account] if arm != "enc-average-3s"])
     rows = inventory(args.account)
-    for arm in ARMS[args.account]:
+    for arm in arms:
         selected = [r for r in rows if r["arm"] == arm]
         print(f"{arm}: reuse {sum(r['reuse'] for r in selected)}/50; submit {sum(not r['reuse'] for r in selected)}")
     if args.plan:
         return
     if getpass.getuser() != args.account:
         parser.error(f"Must submit from {args.account}")
-    for arm, (_, _, gpu, _) in ARMS[args.account].items():
+    for arm in arms:
+        _, _, gpu, _ = ARMS[args.account][arm]
         selected = [r for r in rows if r["arm"] == arm]
         stage, missing = prepare_stage(args.account, arm, selected)
         submit_stage(stage, missing, gpu, args.retry)

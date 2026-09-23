@@ -35,6 +35,7 @@ ARMS = {
         'pe-ch_order': (SHARED / 'accounts/hk4935/pe-ch_order', 'gl40s'),
         'pe-acpe': (SHARED / 'accounts/hk4935/pe-acpe', 'gl40s'),
         'pe-4dREVE': (SHARED / 'accounts/hk4935/pe-4dREVE', 'gl40s'),
+        'enc-average-3s': (OWNER4 / 'enc-average-3s', 'gl40s'),
     },
     'yc8820': {
         'cbramod': (SHARED / 'accounts/yc8820/cbramod', 'gl40s'),
@@ -61,7 +62,9 @@ def checked_hp(lr: float, wd: float, dropout: float) -> dict:
 
 def prepare_stage(original: Path, arm: str, account: str, hp: dict) -> tuple[Path, list[dict]]:
     checkpoint, proof = common.verify_checkpoint(original, .55)
-    stage = original / 'tuab_final_comparison'
+    stage = (SHARED / 'accounts/hk4935/tuab_final_comparison/enc-average-3s'
+             if account == 'hk4935' and arm == 'enc-average-3s'
+             else original / 'tuab_final_comparison')
     manifest_path = stage / 'manifest.json'
     if manifest_path.exists():
         manifest = json.loads(manifest_path.read_text(encoding='utf-8'))
