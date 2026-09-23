@@ -15,7 +15,7 @@ from src.data.datasets.siena_dataset import SienaDataset
 from src.data.datasets.stress_dataset import StressDataset
 from src.data.datasets.tuab_dataset import TUABDataset
 from src.data.datasets.tuev_dataset import TUEVDataset
-from src.data.datasets.tuh_clinical_dataset import TUSZDataset, TUSLDataset
+from src.data.datasets.tuh_clinical_dataset import TUSZDataset
 
 
 @dataclass(frozen=True)
@@ -42,7 +42,6 @@ DATASET_SPECS = {
     "tuab": DatasetSpec(TUABDataset, "binary", 1, 16, 2000),
     "tuev": DatasetSpec(TUEVDataset, "multiclass", 6, 16, 1000),
     "tusz": DatasetSpec(TUSZDataset, "binary", 1, 19, 2000),
-    "tusl": DatasetSpec(TUSLDataset, "multiclass", 3, 19, 2000),
 }
 
 

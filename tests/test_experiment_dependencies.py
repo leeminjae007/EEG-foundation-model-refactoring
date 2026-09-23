@@ -34,7 +34,7 @@ def test_arrays_use_success_dependency_without_hold_or_polling(tmp_path, monkeyp
     monkeypatch.setattr(downstream.subprocess, 'check_output', submit)
     monkeypatch.setattr(sys, 'argv', ['submit', '--experiment', str(folder), '--dependency', '123'])
     downstream.main()
-    assert len(commands) == 12
+    assert len(commands) == len(downstream.DATASETS)
     for command in commands:
         assert '--dependency=afterok:123' in command
         assert '--kill-on-invalid-dep=yes' in command
@@ -44,17 +44,18 @@ def test_arrays_use_success_dependency_without_hold_or_polling(tmp_path, monkeyp
         wrap = next(x for x in command if x.startswith('--wrap='))
         assert 'srun' in wrap and '--gpu-bind=single:1' in wrap
     saved = json.loads((folder / 'manifest.json').read_text())
-    assert len(saved['downstream_jobs']) == 12
+    assert len(saved['downstream_jobs']) == len(downstream.DATASETS)
     assert [x['dataset'] for x in saved['downstream_jobs']] == list(downstream.DATASETS)
     assert saved['downstream_state'] == 'dependency'
     with pytest.raises(ValueError, match='already submitted'):
         downstream.main()
 
 
-def test_all_60_configs_preserve_common_lr_and_base_settings(tmp_path):
+def test_all_supported_configs_preserve_common_lr_and_base_settings(tmp_path):
     folder = experiment(tmp_path)
     entries = downstream.prepare(folder, folder / 'pretrain/checkpoint-epoch-0040.pth')
-    assert len(entries) == 60
+    assert len(entries) == len(downstream.DATASETS) * len(downstream.SEEDS)
+    assert 'tusl' not in downstream.DATASETS
     for dataset in downstream.DATASETS:
         group = [e for e in entries if e['dataset'] == dataset]
         assert {e['seed'] for e in group} == set(downstream.SEEDS)
@@ -116,7 +117,7 @@ def test_missing_or_smoke_results_never_publish(tmp_path, monkeypatch):
     downstream.prepare(folder, folder / 'pretrain/checkpoint-epoch-0040.pth')
     monkeypatch.setattr(finalize_experiment.publisher, 'publish', lambda *a: pytest.fail('Published missing results'))
     state = finalize_experiment.finalize(folder)
-    assert state['status'] == 'incomplete' and len(state['missing']) == 60
+    assert state['status'] == 'incomplete' and len(state['missing']) == len(downstream.DATASETS) * len(downstream.SEEDS)
     assert not (folder / 'published.json').exists()
     manifest = json.loads((folder / 'manifest.json').read_text())
     manifest['smoke_seconds'] = 300

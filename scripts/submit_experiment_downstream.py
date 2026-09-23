@@ -10,8 +10,8 @@ import yaml
 
 SEEDS = (42, 696, 1001, 1234, 3407)
 DATASETS = ('chb', 'siena', 'physionet_mi', 'tuev', 'tuab', 'faced', 'seedv',
-            'mentalarithmetic', 'isruc', 'hmc', 'tusl', 'tusz')
-TEMPLATE_PREFIX = {'tusz': 'nearest3_7', 'tusl': 'nearest3_7'}
+            'mentalarithmetic', 'isruc', 'hmc', 'tusz')
+TEMPLATE_PREFIX = {'tusz': 'nearest3_7'}
 A100_DOWNSTREAM = {
     'gr2-d4-patch-dimension-mask55',
     'gr2-d4-patch-dimension-mask60',

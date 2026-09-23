@@ -11,8 +11,8 @@ import sys
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from scripts import monitor_experiment_results as publisher
 
-NAMES = dict(zip(('chb', 'siena', 'physionet_mi', 'tuev', 'tuab', 'faced', 'seedv', 'mentalarithmetic', 'isruc', 'hmc', 'tusl', 'tusz'),
-                 ('CHB-MIT', 'SIENA', 'PHYSIONET-MI', 'TUEV', 'TUAB', 'FACED', 'SEED-V', 'Mental Arithmetic', 'ISRUC', 'HMC', 'TUSL', 'TUSZ')))
+NAMES = dict(zip(('chb', 'siena', 'physionet_mi', 'tuev', 'tuab', 'faced', 'seedv', 'mentalarithmetic', 'isruc', 'hmc', 'tusz'),
+                 ('CHB-MIT', 'SIENA', 'PHYSIONET-MI', 'TUEV', 'TUAB', 'FACED', 'SEED-V', 'Mental Arithmetic', 'ISRUC', 'HMC', 'TUSZ')))
 
 
 def collect(experiment):

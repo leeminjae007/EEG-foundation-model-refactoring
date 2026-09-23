@@ -26,7 +26,6 @@ RECIPES = {
     "seedv": ("SEED-V", "seed-v", 1e-4, .01, .1, .1, 50),
     "bciciv2a": ("BCIC-IV-2a", "bciciv2a", 1e-4, .01, .2, .1, 50),
     "tusz": ("TUSZ", "tusz", 1e-4, .01, .3, 0., 50),
-    "tusl": ("TUSL", "tusl", 1e-4, .01, .3, .1, 50),
 }
 
 
@@ -69,7 +68,7 @@ def prepare(folder):
     entries = []
     for slug, (name, dataset, lr, wd, dropout, smoothing, epochs) in RECIPES.items():
         for seed in SEEDS:
-            stem = ("nearest3_7_" if slug in ("tusz", "tusl") else "gr9-1_") + slug
+            stem = ("nearest3_7_" if slug == "tusz" else "gr9-1_") + slug
             base = ROOT / "configs/downstream" / f"{stem}_seed{seed}.yaml"
             cfg = yaml.safe_load(base.read_text())
             assert cfg["data"]["dataset"] == dataset and cfg["seed"] == seed

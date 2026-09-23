@@ -18,5 +18,4 @@ datasets:
   mentalarithmetic: {partitions: 'gl40s_dev,gl40s_short', time: '04:00:00'}
   isruc: {partitions: 'gl40s_dev,gl40s_short,gl40s_long', time: '04:00:00'}
   hmc: {partitions: 'gl40s_dev,gl40s_short,gl40s_long', time: '04:00:00'}
-  tusl: {partitions: 'gl40s_dev,gl40s_short', time: '04:00:00'}
   tusz: {partitions: 'gl40s_dev,gl40s_short', time: '04:00:00'}
