@@ -46,8 +46,6 @@ ARMS = {
                     SHARED / "accounts/hk4935/fourtask_downstream/pe-acpe", "a100", .55),
         "pe-4dREVE": (SHARED / "accounts/hk4935/pe-4dREVE",
                       SHARED / "accounts/hk4935/fourtask_downstream/pe-4dREVE", "a100", .55),
-        "ours-lite": (RESULTS / "enc-lite", RESULTS / "enc-lite", "gl40s", .60),
-        "enc-average-3s": (RESULTS / "enc-average-3s", None, "gl40s", .60),
     },
     "yc8820": {
         "cbramod": (SHARED / "accounts/yc8820/cbramod",

@@ -9,6 +9,9 @@ from scripts import submit_mask55_final_comparison as final
 def test_scope_and_resource_routing():
     assert len(final.DATASETS) == 10
     assert "tuab" not in final.DATASETS and "tusl" not in final.DATASETS
+    assert set(final.ARMS["hk4935"]) == {"pe-ch_order", "pe-acpe", "pe-4dREVE"}
+    assert "enc-s2t-6stage" not in final.ARMS["yc8820"]
+    assert "enc-t2s-6stage" not in final.ARMS["yc8820"]
     assert final.HP["mentalarithmetic"] == (1e-4, .02, .1)
     assert final.HP["physionet_mi"] == (1e-4, .02, .1)
     assert final.resources("a100", "chb")["partitions"] == "a100_short,a100_long"
