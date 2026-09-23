@@ -155,6 +155,8 @@ def submit_stage(stage: Path, entries: list[dict], arm: str, gpu: str) -> str:
     policy = common.resources(gpu, 'tuab')
     policy['partitions'] = 'a100_short,a100_long' if gpu == 'a100' else 'gl40s_long'
     policy['time'] = '24:00:00'
+    # BigPurple names the L40S GRES ``l40s``, even though its partition is gl40s_*.
+    slurm_gpu = 'l40s' if gpu == 'gl40s' else gpu
     missing = [index for index, entry in enumerate(entries)
                if not common.complete(Path(entry['output']) / 'result.json')]
     if not missing:
@@ -162,14 +164,14 @@ def submit_stage(stage: Path, entries: list[dict], arm: str, gpu: str) -> str:
     logs = stage / 'downstream/logs'
     logs.mkdir(parents=True, exist_ok=True)
     wrap = shlex.join([
-        'srun', '--ntasks=1', f'--gpus-per-task={gpu}:1',
+        'srun', '--ntasks=1', f'--gpus-per-task={slurm_gpu}:1',
         '--gpu-bind=single:1', '--kill-on-bad-exit=1', sys.executable,
         str(ROOT / 'scripts/downstream_experiment_worker.py'), '--experiment', str(stage),
     ])
     command = [
         'sbatch', '--parsable', '--account=system', '--job-name=tuab55-' + arm,
         '--partition=' + policy['partitions'], '--nodes=1', '--ntasks=1',
-        f'--gpus-per-task={gpu}:1', '--cpus-per-task=4', '--mem=32G',
+        f'--gpus-per-task={slurm_gpu}:1', '--cpus-per-task=4', '--mem=32G',
         '--time=' + policy['time'],
         '--array=' + ','.join(map(str, missing)) + '%5',
         '--output=' + str(logs / '%A_%a.out'),
