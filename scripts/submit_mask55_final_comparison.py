@@ -7,6 +7,7 @@ their own activated environment: --account hk4935 or --account yc8820.
 from __future__ import annotations
 
 import argparse
+from datetime import datetime
 import getpass
 import hashlib
 import json
@@ -16,6 +17,7 @@ import shlex
 import shutil
 import subprocess
 import sys
+from zoneinfo import ZoneInfo
 
 import yaml
 
@@ -201,6 +203,11 @@ def prepare_stage(account: str, arm: str, rows: list[dict]) -> tuple[Path, list[
                 or manifest.get("hyperparameters") !=
                 {name: list(value) for name, value in HP.items()}):
             raise ValueError(f"Existing stage provenance differs: {stage}")
+        manifest.setdefault("experiment", stage.name)
+        manifest.setdefault("created_at_new_york",
+                            datetime.now(ZoneInfo("America/New_York")).strftime("%y%m%d-%H%M"))
+        manifest.setdefault("publication_root", str(stage / "outputs/results"))
+        manifest_path.write_text(json.dumps(manifest, indent=2) + "\n")
     else:
         stage.mkdir(parents=True)
         (stage / "source").symlink_to(ROOT, target_is_directory=True)
@@ -218,6 +225,9 @@ def prepare_stage(account: str, arm: str, rows: list[dict]) -> tuple[Path, list[
             (stage / "configs/pretrain.yaml").write_text(
                 yaml.safe_dump(saved["config"], sort_keys=False), encoding="utf-8")
         manifest = dict(preset=arm, owner=account, source_pretrain=str(original),
+                        experiment=stage.name,
+                        created_at_new_york=datetime.now(ZoneInfo("America/New_York")).strftime("%y%m%d-%H%M"),
+                        publication_root=str(stage / "outputs/results"),
                         historical_results=str(old) if old else None,
                         checkpoint_sha256=proof["sha256"],
                         hyperparameters={name: list(value) for name, value in HP.items()},
@@ -252,6 +262,12 @@ def prepare_stage(account: str, arm: str, rows: list[dict]) -> tuple[Path, list[
 def submit_stage(stage: Path, missing: list[dict], gpu: str, retry: bool) -> None:
     manifest_path = stage / "manifest.json"
     manifest = read_json(manifest_path)
+    if retry and missing and manifest.get("finalizer_job"):
+        old_finalizer = str(manifest["finalizer_job"])
+        if slurm_active_state(old_finalizer):
+            raise RuntimeError(f"Finalizer {old_finalizer} is still active")
+        manifest.pop("finalizer_job")
+        manifest_path.write_text(json.dumps(manifest, indent=2) + "\n")
     registered = {j["dataset"] for j in manifest["downstream_jobs"]}
     for dataset in DATASETS:
         current = [r for r in missing if r["dataset"] == dataset]
@@ -289,6 +305,10 @@ def submit_stage(stage: Path, missing: list[dict], gpu: str, retry: bool) -> Non
                                                  resources=policy))
         manifest_path.write_text(json.dumps(manifest, indent=2) + "\n")
         print(f"{stage.name} {dataset} {job} {len(current)} seeds", flush=True)
+    manifest = read_json(manifest_path)
+    if manifest["downstream_jobs"] and not manifest.get("finalizer_job"):
+        subprocess.run([sys.executable, str(ROOT / "scripts/finalize_experiment.py"),
+                        "--experiment", str(stage), "--submit"], check=True)
 
 
 def main() -> None:
