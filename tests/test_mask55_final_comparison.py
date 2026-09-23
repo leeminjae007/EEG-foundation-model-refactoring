@@ -1,4 +1,5 @@
 import json
+import subprocess
 
 import yaml
 
@@ -39,3 +40,9 @@ def test_reuse_requires_five_seed_result_and_exact_default(tmp_path):
     config.write_text(yaml.safe_dump(values))
     result.write_text("{")
     assert not final.matching_old(old, "physionet_mi", seed)
+
+
+def test_purged_slurm_id_is_not_an_active_job(monkeypatch):
+    monkeypatch.setattr(final.subprocess, "run", lambda *a, **k:
+                        subprocess.CompletedProcess(a[0], 1, "", "slurm_load_jobs error: Invalid job id specified"))
+    assert final.slurm_active_state("27678704") == ""

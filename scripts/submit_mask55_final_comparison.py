@@ -103,7 +103,12 @@ def verify_checkpoint(original: Path, ratio: float) -> tuple[Path, dict]:
                 or proof.get("checkpoint") != str(checkpoint)
                 or proof.get("sha256") != hashlib.sha256(checkpoint.read_bytes()).hexdigest()):
             raise ValueError(f"Invalid verified checkpoint: {original}")
-        config = yaml.safe_load((original / "configs/pretrain.yaml").read_text(encoding="utf-8"))
+        config_path = original / "configs/pretrain.yaml"
+        if config_path.is_file():
+            config = yaml.safe_load(config_path.read_text(encoding="utf-8"))
+        else:
+            import torch
+            config = torch.load(checkpoint, map_location="cpu")["config"]
     else:
         import torch
         from ablation.models import build_pretrain
@@ -153,9 +158,21 @@ def ensure_no_old_jobs(old: Path, dataset: str) -> None:
         if job.get("dataset") != dataset:
             continue
         job_id = str(job["job"])
-        status = subprocess.check_output(["squeue", "-h", "-j", job_id, "-o", "%T"], text=True).strip()
+        status = slurm_active_state(job_id)
         if status:
             raise RuntimeError(f"Old {dataset} job {job_id} remains active: {status}")
+
+
+def slurm_active_state(job_id: str) -> str:
+    query = subprocess.run(["squeue", "-h", "-j", job_id, "-o", "%T"],
+                           text=True, capture_output=True)
+    if query.returncode:
+        # BigPurple returns exit 1 after old IDs fall out of Slurm's live
+        # job table. Only that exact condition means the job is not active.
+        if "Invalid job id specified" in query.stderr:
+            return ""
+        raise RuntimeError(f"squeue {job_id}: {query.stderr.strip()}")
+    return query.stdout.strip()
 
 
 def remove_mismatched_old(old: Path | None, dataset: str, seed: int) -> None:
@@ -244,9 +261,7 @@ def submit_stage(stage: Path, missing: list[dict], gpu: str, retry: bool) -> Non
             for previous in manifest["downstream_jobs"]:
                 if previous["dataset"] != dataset:
                     continue
-                status = subprocess.check_output(
-                    ["squeue", "-h", "-j", str(previous["job"]), "-o", "%T"],
-                    text=True).strip()
+                status = slurm_active_state(str(previous["job"]))
                 if status:
                     raise RuntimeError(f"{dataset}: prior array {previous['job']} is still active")
         policy = resources(gpu, dataset)
