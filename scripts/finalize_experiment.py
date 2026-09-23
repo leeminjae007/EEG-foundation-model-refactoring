@@ -15,6 +15,18 @@ NAMES = dict(zip(('chb', 'siena', 'physionet_mi', 'tuev', 'tuab', 'faced', 'seed
                  ('CHB-MIT', 'SIENA', 'PHYSIONET-MI', 'TUEV', 'TUAB', 'FACED', 'SEED-V', 'Mental Arithmetic', 'ISRUC', 'HMC', 'TUSZ')))
 
 
+def training_complete(saved, config, payload):
+    if saved['extra'].get('partial_epoch_smoke') or saved['config'] != config:
+        return False
+    if saved['epoch'] == config['optimization']['epochs']:
+        return True
+    training = payload.get('_training', {})
+    return (config['optimization'].get('early_stopping') is not None
+            and training.get('early_stopped') is True
+            and saved['extra'].get('early_stopped') is True
+            and saved['epoch'] == training.get('epochs_completed'))
+
+
 def collect(experiment):
     import torch
     import yaml
@@ -30,7 +42,7 @@ def collect(experiment):
             if not all(k in values and math.isfinite(values[k]) for k in required):
                 raise ValueError('Missing required finite test metrics')
             saved = torch.load(output / 'last.pth', map_location='cpu')
-            if saved['extra'].get('partial_epoch_smoke') or saved['epoch'] != config['optimization']['epochs'] or saved['config'] != config:
+            if not training_complete(saved, config, payload):
                 raise ValueError('Incomplete epochs, smoke checkpoint, or config mismatch')
             epoch = payload['balanced_accuracy']['selection']['epoch']
             validation = [json.loads(line) for line in (output / 'validation.jsonl').read_text().splitlines()]
