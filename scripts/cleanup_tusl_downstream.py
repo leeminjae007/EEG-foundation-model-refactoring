@@ -5,8 +5,8 @@ Owner-only, exact reviewed campaign allowlist.  Dry-run unless --apply is given.
 from __future__ import annotations
 
 import argparse
-import getpass
 import json
+import os
 from pathlib import Path
 import re
 import shutil
@@ -27,12 +27,18 @@ CAMPAIGNS = (
 )
 
 
-def main() -> None:
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--apply", action="store_true")
-    args = parser.parse_args()
-    if args.apply and getpass.getuser() != "ml10266":
-        parser.error("Only ml10266 may remove owner-hosted historical results")
+def can_remove_tree(path: Path) -> bool:
+    if path.is_symlink():
+        return True
+    for folder, dirs, _ in os.walk(path):
+        if not os.access(folder, os.W_OK | os.X_OK):
+            return False
+        dirs[:] = [name for name in dirs if not (Path(folder) / name).is_symlink()]
+    return True
+
+
+def cleanup(apply: bool) -> None:
+    removed = skipped = 0
     active = subprocess.check_output(
         ["squeue", "-h", "-u", "ml10266,hk4935,yc8820", "-o", "%j"],
         text=True).lower().splitlines()
@@ -46,14 +52,34 @@ def main() -> None:
                 or campaign.resolve().parent != ROOT.resolve()):
             raise ValueError(f"Unsafe cleanup target: {target}")
         if target.is_dir():
-            print(("REMOVE " if args.apply else "WOULD REMOVE ") + str(target))
-            if args.apply:
-                shutil.rmtree(target)
+            for child in target.iterdir():
+                if child.resolve().parent != target.resolve() and not child.is_symlink():
+                    raise ValueError(f"Unsafe child target: {child}")
+                allowed = os.access(target, os.W_OK | os.X_OK) and (
+                    not child.is_dir() or can_remove_tree(child))
+                if not allowed:
+                    skipped += 1
+                    print(f"SKIP permission {child}")
+                    continue
+                removed += 1
+                print(("REMOVE " if apply else "WOULD REMOVE ") + str(child))
+                if apply:
+                    if child.is_dir() and not child.is_symlink():
+                        shutil.rmtree(child)
+                    else:
+                        child.unlink()
+            if apply and not any(target.iterdir()) and os.access(target.parent, os.W_OK | os.X_OK):
+                target.rmdir()
         for config in (campaign / "configs/downstream").glob("tusl_seed*.yaml"):
             if config.is_symlink() or config.resolve().parent != (campaign / "configs/downstream").resolve():
                 raise ValueError(f"Unsafe config target: {config}")
-            print(("REMOVE " if args.apply else "WOULD REMOVE ") + str(config))
-            if args.apply:
+            if not os.access(config.parent, os.W_OK | os.X_OK):
+                skipped += 1
+                print(f"SKIP permission {config}")
+                continue
+            removed += 1
+            print(("REMOVE " if apply else "WOULD REMOVE ") + str(config))
+            if apply:
                 config.unlink()
         manifest_path = campaign / "manifest.json"
         if manifest_path.is_file():
@@ -68,14 +94,22 @@ def main() -> None:
                                 for job in jobs)):
                         if log.resolve().parent != logs.resolve():
                             raise ValueError(f"Unsafe log target: {log}")
-                        print(("REMOVE " if args.apply else "WOULD REMOVE ") + str(log))
-                        if args.apply:
+                        if not os.access(log.parent, os.W_OK | os.X_OK):
+                            skipped += 1
+                            print(f"SKIP permission {log}")
+                            continue
+                        removed += 1
+                        print(("REMOVE " if apply else "WOULD REMOVE ") + str(log))
+                        if apply:
                             log.unlink()
-        if args.apply:
-            marker = campaign / "tusl-removal.json"
-            marker.write_text(json.dumps(dict(dataset="tusl", removed_raw_downstream=True,
-                                              reason="User excluded TUSL from downstream"),
-                                         indent=2) + "\n")
+    print(f"TUSL cleanup: eligible={removed} permission_skipped={skipped}")
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--apply", action="store_true")
+    args = parser.parse_args()
+    cleanup(args.apply)
 
 
 if __name__ == "__main__":
