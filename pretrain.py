@@ -14,7 +14,8 @@ from src.training.engine import run_pretrain
 # deeply nested immutable campaign path. Force that internal socket directory
 # to the short node-local TMPDIR before DataLoader workers are created.
 multiprocessing.current_process()._config["tempdir"] = os.environ.get("TMPDIR", "/tmp")
-torch.multiprocessing.set_sharing_strategy("file_descriptor")
+if "file_descriptor" in torch.multiprocessing.get_all_sharing_strategies():
+    torch.multiprocessing.set_sharing_strategy("file_descriptor")
 
 
 if __name__ == "__main__":
