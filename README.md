@@ -8,17 +8,17 @@ ablation models, campaign scripts, logs, checkpoints and data are not included.
 ## Setup and data
 
 Use Python 3.9 with the dependencies in `requirements.txt` (CUDA-enabled
-PyTorch 2.0.1 for GPU training). Input data are **already processed LMDBs**:
-the pretraining LMDB stores `__keys__` and 19-channel, 30-patch, 200-sample
-records; downstream LMDBs must follow the split/record contracts in
-`src/data/datasets/`. Raw-to-LMDB preprocessing is not included in this
-code-only release. Obtain datasets under their own licenses.
+PyTorch 2.0.1 for GPU training). `preprocess_pretrain.py` converts licensed
+TUH/TUEG EDF recordings to an LMDB with `__keys__` and 19-channel, 30-patch,
+200-sample records. Downstream LMDBs must follow the split/record contracts in
+`src/data/datasets/`. Obtain datasets under their own licenses.
 
 Only `configs/pretrain.yaml` and `configs/downstream.yaml` are supplied.
 `path` is a placeholder; pass actual locations through CLI flags. Outputs
 default to the ignored `outputs/` directory.
 
 ```bash
+python preprocess_pretrain.py --raw-root /path/to/tueg/edf --output /path/to/pretrain-lmdb
 python pretrain.py --data-dir /path/to/pretrain-lmdb --output outputs/pretrain
 python finetune.py --dataset chb --data-dir /path/to/chb-lmdb \
   --checkpoint /path/to/pretrain-checkpoint.pth --seed 42
